@@ -8,7 +8,7 @@ from __future__ import unicode_literals, print_function, division
 import os
 import subprocess
 
-ROOT_DIR = os.path.dirname(__file__)
+ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
 def get_dir(relative_path=''):
     return os.path.abspath(os.path.join(ROOT_DIR, relative_path))
 
