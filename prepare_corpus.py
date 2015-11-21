@@ -7,6 +7,7 @@ from __future__ import unicode_literals, print_function, division
 
 import os
 import subprocess
+import re
 
 from translate.data_utils import create_vocabulary, data_to_token_ids
 from get_data import CACHE_DIR, MODERN_FILENAME, ORIGINAL_FILENAME, TRAIN_SUFFIX, DEV_SUFFIX
@@ -28,10 +29,20 @@ MODERN_DEV_IDS_PATH = os.path.join(CACHE_DIR, "all_modern" + DEV_SUFFIX + ".ids"
 ORIGINAL_TRAIN_IDS_PATH = os.path.join(CACHE_DIR, "all_original" + TRAIN_SUFFIX + ".ids")
 ORIGINAL_DEV_IDS_PATH = os.path.join(CACHE_DIR, "all_original" + DEV_SUFFIX + ".ids")
 
+_WORD_SPLIT = re.compile("([.,!?\"':;)(])")
+
+
+def tokenizer(sentence):
+    """Very basic tokenizer: split the sentence into a list of tokens + lower()."""
+    words = []
+    for space_separated_fragment in sentence.lower().strip().split():
+        words.extend(re.split(_WORD_SPLIT, space_separated_fragment))
+    return [w for w in words if w]
+
 
 def build_vocab():
-    create_vocabulary(MODERN_VOCAB_PATH, MODERN_PATH, MODERN_VOCAB_MAX)
-    create_vocabulary(ORIGINAL_VOCAB_PATH, ORIGINAL_PATH, ORIGINAL_VOCAB_MAX)
+    create_vocabulary(MODERN_VOCAB_PATH, MODERN_PATH, MODERN_VOCAB_MAX, tokenizer=tokenizer)
+    create_vocabulary(ORIGINAL_VOCAB_PATH, ORIGINAL_PATH, ORIGINAL_VOCAB_MAX, tokenizer=tokenizer)
 
     print( subprocess.check_output(['wc', '-l', MODERN_VOCAB_PATH]) )
     print( subprocess.check_output(['wc', '-l', ORIGINAL_VOCAB_PATH]) )
