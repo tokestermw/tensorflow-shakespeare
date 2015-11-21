@@ -11,6 +11,8 @@ See the following papers for more information on neural translation models.
  * http://arxiv.org/abs/1409.3215
  * http://arxiv.org/abs/1409.0473
  * http://arxiv.org/pdf/1412.2007v2.pdf
+
+ Adapted by Motoki Wu.
 """
 from __future__ import absolute_import
 from __future__ import division
@@ -28,8 +30,8 @@ import numpy as np
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 
-from tensorflow.models.rnn.translate import data_utils
-from tensorflow.models.rnn.translate import seq2seq_model
+import data_utils
+import seq2seq_model
 from tensorflow.python.platform import gfile
 
 
@@ -42,8 +44,6 @@ tf.app.flags.DEFINE_integer("batch_size", 64,
                             "Batch size to use during training.")
 tf.app.flags.DEFINE_integer("size", 1024, "Size of each model layer.")
 tf.app.flags.DEFINE_integer("num_layers", 3, "Number of layers in the model.")
-tf.app.flags.DEFINE_integer("en_vocab_size", 40000, "English vocabulary size.")
-tf.app.flags.DEFINE_integer("fr_vocab_size", 40000, "French vocabulary size.")
 tf.app.flags.DEFINE_string("data_dir", "/tmp", "Data directory")
 tf.app.flags.DEFINE_string("train_dir", "/tmp", "Training directory.")
 tf.app.flags.DEFINE_integer("max_train_data_size", 0,
@@ -54,6 +54,29 @@ tf.app.flags.DEFINE_boolean("decode", False,
                             "Set to True for interactive decoding.")
 tf.app.flags.DEFINE_boolean("self_test", False,
                             "Run a self-test if this is set to True.")
+
+"""
+MODERN ~ Modern English
+ORIGINAL ~ Shakespeare
+
+TensorFlow examples goes from EN -> FR.
+This script goes from MODERN -> ORIGINAL.
+"""
+
+from prepare_corpus import MODERN_TRAIN_IDS_PATH, MODERN_DEV_IDS_PATH, ORIGINAL_TRAIN_IDS_PATH, ORIGINAL_DEV_IDS_PATH
+from prepare_corpus import MODERN_VOCAB_PATH, ORIGINAL_VOCAB_PATH
+from prepare_corpus import MODERN_VOCAB_MAX, ORIGINAL_VOCAB_MAX
+
+tf.app.flags.DEFINE_string("en_train", MODERN_TRAIN_IDS_PATH, "modern train ids path")
+tf.app.flags.DEFINE_string("fr_train", ORIGINAL_TRAIN_IDS_PATH, "original train ids path")
+tf.app.flags.DEFINE_string("en_dev", MODERN_DEV_IDS_PATH, "modern dev ids path")
+tf.app.flags.DEFINE_string("fr_dev", ORIGINAL_DEV_IDS_PATH, "original dev ids path")
+tf.app.flags.DEFINE_string("en_vocab", MODERN_VOCAB_PATH, "modern vocab path")
+tf.app.flags.DEFINE_string("fr_vocab", ORIGINAL_VOCAB_MAX, "original vocab path")
+
+tf.app.flags.DEFINE_integer("en_vocab_size", MODERN_VOCAB_MAX, "modern vocabulary size")
+tf.app.flags.DEFINE_integer("fr_vocab_size", ORIGINAL_VOCAB_MAX, "original vocabulary size")
+
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -120,9 +143,14 @@ def create_model(session, forward_only):
 def train():
   """Train a en->fr translation model using WMT data."""
   # Prepare WMT data.
-  print("Preparing WMT data in %s" % FLAGS.data_dir)
-  en_train, fr_train, en_dev, fr_dev, _, _ = data_utils.prepare_wmt_data(
-      FLAGS.data_dir, FLAGS.en_vocab_size, FLAGS.fr_vocab_size)
+  # print("Preparing WMT data in %s" % FLAGS.data_dir)
+  # en_train, fr_train, en_dev, fr_dev, _, _ = data_utils.prepare_wmt_data(
+      # FLAGS.data_dir, FLAGS.en_vocab_size, FLAGS.fr_vocab_size)
+
+  en_train = FLAGS.en_train
+  fr_train = FLAGS.fr_train
+  en_dev = FLAGS.en_dev
+  fr_dev = FLAGS.fr_dev
 
   with tf.Session() as sess:
     # Create model.
@@ -197,10 +225,13 @@ def decode():
     model.batch_size = 1  # We decode one sentence at a time.
 
     # Load vocabularies.
-    en_vocab_path = os.path.join(FLAGS.data_dir,
-                                 "vocab%d.en" % FLAGS.en_vocab_size)
-    fr_vocab_path = os.path.join(FLAGS.data_dir,
-                                 "vocab%d.fr" % FLAGS.fr_vocab_size)
+    # en_vocab_path = os.path.join(FLAGS.data_dir,
+                                 # "vocab%d.en" % FLAGS.en_vocab_size)
+    # fr_vocab_path = os.path.join(FLAGS.data_dir,
+                                 # "vocab%d.fr" % FLAGS.fr_vocab_size)
+    en_vocab_path = FLAGS.en_vocab
+    fr_vocab_path = FLAGS.fr_vocab
+
     en_vocab, _ = data_utils.initialize_vocabulary(en_vocab_path)
     _, rev_fr_vocab = data_utils.initialize_vocabulary(fr_vocab_path)
 
