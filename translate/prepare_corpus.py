@@ -13,11 +13,12 @@ from data_utils import create_vocabulary, data_to_token_ids
 from get_data import CACHE_DIR, MODERN_FILENAME, ORIGINAL_FILENAME, TRAIN_SUFFIX, DEV_SUFFIX
 from get_data import MODERN_PATH, ORIGINAL_PATH, MODERN_TRAIN_PATH, MODERN_DEV_PATH, ORIGINAL_TRAIN_PATH, ORIGINAL_DEV_PATH
 
+# TODO: integrate all this in translate.py
 MODERN_VOCAB_FILENAME = "all_modern.vocab"
 ORIGINAL_VOCAB_FILENAME = "all_original.vocab"
 
-MODERN_VOCAB_MAX = 20000
-ORIGINAL_VOCAB_MAX = 20000
+MODERN_VOCAB_MAX = 12000
+ORIGINAL_VOCAB_MAX = 14000
 
 IDS_SUFFIX = ".ids"
 
