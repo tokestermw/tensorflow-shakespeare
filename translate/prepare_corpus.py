@@ -49,10 +49,10 @@ def build_vocab():
 
 
 def build_ids():
-    data_to_token_ids(MODERN_TRAIN_PATH, MODERN_TRAIN_IDS_PATH, MODERN_VOCAB_PATH)
-    data_to_token_ids(MODERN_DEV_PATH, MODERN_DEV_IDS_PATH, MODERN_VOCAB_PATH)
-    data_to_token_ids(ORIGINAL_TRAIN_PATH, ORIGINAL_TRAIN_IDS_PATH, ORIGINAL_VOCAB_PATH)
-    data_to_token_ids(ORIGINAL_DEV_PATH, ORIGINAL_DEV_IDS_PATH, ORIGINAL_VOCAB_PATH)
+    data_to_token_ids(MODERN_TRAIN_PATH, MODERN_TRAIN_IDS_PATH, MODERN_VOCAB_PATH, tokenizer=tokenizer)
+    data_to_token_ids(MODERN_DEV_PATH, MODERN_DEV_IDS_PATH, MODERN_VOCAB_PATH, tokenizer=tokenizer)
+    data_to_token_ids(ORIGINAL_TRAIN_PATH, ORIGINAL_TRAIN_IDS_PATH, ORIGINAL_VOCAB_PATH, tokenizer=tokenizer)
+    data_to_token_ids(ORIGINAL_DEV_PATH, ORIGINAL_DEV_IDS_PATH, ORIGINAL_VOCAB_PATH, tokenizer=tokenizer)
 
     print( subprocess.check_output(['wc', '-l', MODERN_TRAIN_IDS_PATH]) )
     print( subprocess.check_output(['wc', '-l', MODERN_DEV_IDS_PATH]) )

@@ -72,7 +72,7 @@ tf.app.flags.DEFINE_string("fr_train", ORIGINAL_TRAIN_IDS_PATH, "original train 
 tf.app.flags.DEFINE_string("en_dev", MODERN_DEV_IDS_PATH, "modern dev ids path")
 tf.app.flags.DEFINE_string("fr_dev", ORIGINAL_DEV_IDS_PATH, "original dev ids path")
 tf.app.flags.DEFINE_string("en_vocab", MODERN_VOCAB_PATH, "modern vocab path")
-tf.app.flags.DEFINE_string("fr_vocab", ORIGINAL_VOCAB_MAX, "original vocab path")
+tf.app.flags.DEFINE_string("fr_vocab", ORIGINAL_VOCAB_PATH, "original vocab path")
 
 tf.app.flags.DEFINE_integer("en_vocab_size", MODERN_VOCAB_MAX, "modern vocabulary size")
 tf.app.flags.DEFINE_integer("fr_vocab_size", ORIGINAL_VOCAB_MAX, "original vocabulary size")
