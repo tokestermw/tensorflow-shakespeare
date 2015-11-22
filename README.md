@@ -37,16 +37,16 @@ simply delete/rename the check points.
 
 [Benchmarks](http://aclweb.org/anthology/C/C12/C12-1177.pdf) (Shakespeare -> Modern English)
 
-| Input | Output
------
-|i will bite thee by the ear for that jest . | i ’ ll bite you by the ear for that joke .
-|what further woe conspires against mine age ? | what ’ s true despair conspires against my old age ?
-|how doth my lady ? |how is my lady ?
-|hast thou slain tybalt ? |have you killed tybalt ?
-|an i might live to see thee married once , i have my wish .| if i could live to see you married, i ’ ve my wish .
-|benvolio , who began this bloody fray ? | benvolio , who started this bloody fight itself ?
-|what is your will ? | what do you want ? 
-|call her forth to me . |bring her out to me .
+Input | Output
+ --- | ---
+i will bite thee by the ear for that jest . | i ’ ll bite you by the ear for that joke .
+what further woe conspires against mine age ? | what ’ s true despair conspires against my old age ?
+how doth my lady ? |how is my lady ?
+hast thou slain tybalt ? |have you killed tybalt ?
+an i might live to see thee married once , i have my wish .| if i could live to see you married, i ’ ve my wish .
+benvolio , who began this bloody fray ? | benvolio , who started this bloody fight itself ?
+what is your will ? | what do you want ? 
+call her forth to me . |bring her out to me .
 
 *This repo* (Modern English -> Shakespeare)
 
