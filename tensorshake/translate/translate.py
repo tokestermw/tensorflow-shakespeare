@@ -30,10 +30,9 @@ import numpy as np
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 
-import data_utils
-import seq2seq_model
+from . import data_utils
+from . import seq2seq_model
 from tensorflow.python.platform import gfile
-
 
 tf.app.flags.DEFINE_float("learning_rate", 0.5, "Learning rate.")
 tf.app.flags.DEFINE_float("learning_rate_decay_factor", 0.99,
@@ -63,9 +62,9 @@ TensorFlow examples goes from EN -> FR.
 This script goes from MODERN -> ORIGINAL.
 """
 
-from prepare_corpus import MODERN_TRAIN_IDS_PATH, MODERN_DEV_IDS_PATH, ORIGINAL_TRAIN_IDS_PATH, ORIGINAL_DEV_IDS_PATH
-from prepare_corpus import MODERN_VOCAB_PATH, ORIGINAL_VOCAB_PATH
-from prepare_corpus import MODERN_VOCAB_MAX, ORIGINAL_VOCAB_MAX
+from ..prepare_corpus import MODERN_TRAIN_IDS_PATH, MODERN_DEV_IDS_PATH, ORIGINAL_TRAIN_IDS_PATH, ORIGINAL_DEV_IDS_PATH
+from ..prepare_corpus import MODERN_VOCAB_PATH, ORIGINAL_VOCAB_PATH
+from ..prepare_corpus import MODERN_VOCAB_MAX, ORIGINAL_VOCAB_MAX
 
 tf.app.flags.DEFINE_string("en_train", MODERN_TRAIN_IDS_PATH, "modern train ids path")
 tf.app.flags.DEFINE_string("fr_train", ORIGINAL_TRAIN_IDS_PATH, "original train ids path")

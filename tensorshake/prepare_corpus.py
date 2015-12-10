@@ -9,9 +9,9 @@ import os
 import subprocess
 import re
 
-from data_utils import create_vocabulary, data_to_token_ids
-from get_data import CACHE_DIR, MODERN_FILENAME, ORIGINAL_FILENAME, TRAIN_SUFFIX, DEV_SUFFIX
-from get_data import MODERN_PATH, ORIGINAL_PATH, MODERN_TRAIN_PATH, MODERN_DEV_PATH, ORIGINAL_TRAIN_PATH, ORIGINAL_DEV_PATH
+from .translate.data_utils import create_vocabulary, data_to_token_ids
+from .get_data import CACHE_DIR, MODERN_FILENAME, ORIGINAL_FILENAME, TRAIN_SUFFIX, DEV_SUFFIX
+from .get_data import MODERN_PATH, ORIGINAL_PATH, MODERN_TRAIN_PATH, MODERN_DEV_PATH, ORIGINAL_TRAIN_PATH, ORIGINAL_DEV_PATH
 
 # TODO: integrate all this in translate.py
 MODERN_VOCAB_FILENAME = "all_modern.vocab"
