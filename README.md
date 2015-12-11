@@ -21,11 +21,11 @@ pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.5.0
 From the root directory:
 
 ```
-python -m tensorshake.translate.get_data
-python -m tensorshake.translate.prepare_corpus
+python -m tensorshake.get_data
+python -m tensorshake.prepare_corpus
 ```
 
-Delete /cache.
+Delete /cache to start anew.
 
 ## Train
 
