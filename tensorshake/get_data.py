@@ -8,14 +8,7 @@ from __future__ import unicode_literals, print_function, division
 import os
 import subprocess
 
-ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
-def get_dir(relative_path=''):
-    return os.path.abspath(os.path.join(ROOT_DIR, relative_path))
-
-CACHE_DIR = get_dir('cache')
-
-if not os.path.exists(CACHE_DIR):
-    os.mkdir(CACHE_DIR)
+from tensorshake import get_dir, CACHE_DIR
 
 DATA_LINKS = {
     "data/shakespeare/sparknotes/merged": "https://github.com/cocoxu/Shakespeare/tree/master/data/align/plays/merged",
@@ -44,7 +37,7 @@ def get_shakespeare_parallel_set():
     
     modern_file = open(os.path.join(CACHE_DIR, MODERN_FILENAME), 'w')
     original_file = open(os.path.join(CACHE_DIR, ORIGINAL_FILENAME), 'w')
-    
+
     for aligned_data in DATA_LINKS:
         for root, dirs, filenames in os.walk(get_dir(aligned_data)):
             for filename in filenames:

@@ -8,17 +8,19 @@ from __future__ import unicode_literals, print_function, division
 import os
 import subprocess
 import re
+# from nltk import word_tokenize
 
-from .translate.data_utils import create_vocabulary, data_to_token_ids
-from .get_data import CACHE_DIR, MODERN_FILENAME, ORIGINAL_FILENAME, TRAIN_SUFFIX, DEV_SUFFIX
-from .get_data import MODERN_PATH, ORIGINAL_PATH, MODERN_TRAIN_PATH, MODERN_DEV_PATH, ORIGINAL_TRAIN_PATH, ORIGINAL_DEV_PATH
+from tensorshake import CACHE_DIR
+from tensorshake.translate.data_utils import create_vocabulary, data_to_token_ids
+from tensorshake.get_data import MODERN_FILENAME, ORIGINAL_FILENAME, TRAIN_SUFFIX, DEV_SUFFIX
+from tensorshake.get_data import MODERN_PATH, ORIGINAL_PATH, MODERN_TRAIN_PATH, MODERN_DEV_PATH, ORIGINAL_TRAIN_PATH, ORIGINAL_DEV_PATH
 
 # TODO: integrate all this in translate.py
 MODERN_VOCAB_FILENAME = "all_modern.vocab"
 ORIGINAL_VOCAB_FILENAME = "all_original.vocab"
 
-MODERN_VOCAB_MAX = 12000
-ORIGINAL_VOCAB_MAX = 14000
+MODERN_VOCAB_MAX = 10000
+ORIGINAL_VOCAB_MAX = 10000
 
 IDS_SUFFIX = ".ids"
 
@@ -35,6 +37,7 @@ _WORD_SPLIT = re.compile("([.,!?\"':;)(])")
 
 def tokenizer(sentence):
     """Very basic tokenizer: split the sentence into a list of tokens + lower()."""
+    # return word_tokenize(sentence)
     words = []
     for space_separated_fragment in sentence.lower().strip().split():
         words.extend(re.split(_WORD_SPLIT, space_separated_fragment))

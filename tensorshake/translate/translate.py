@@ -30,8 +30,8 @@ import numpy as np
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 
-from . import data_utils
-from . import seq2seq_model
+from tensorshake.translate import data_utils
+from tensorshake.translate import seq2seq_model
 from tensorflow.python.platform import gfile
 
 tf.app.flags.DEFINE_float("learning_rate", 0.5, "Learning rate.")
@@ -62,9 +62,9 @@ TensorFlow examples goes from EN -> FR.
 This script goes from MODERN -> ORIGINAL.
 """
 
-from ..prepare_corpus import MODERN_TRAIN_IDS_PATH, MODERN_DEV_IDS_PATH, ORIGINAL_TRAIN_IDS_PATH, ORIGINAL_DEV_IDS_PATH
-from ..prepare_corpus import MODERN_VOCAB_PATH, ORIGINAL_VOCAB_PATH
-from ..prepare_corpus import MODERN_VOCAB_MAX, ORIGINAL_VOCAB_MAX
+from tensorshake.prepare_corpus import MODERN_TRAIN_IDS_PATH, MODERN_DEV_IDS_PATH, ORIGINAL_TRAIN_IDS_PATH, ORIGINAL_DEV_IDS_PATH
+from tensorshake.prepare_corpus import MODERN_VOCAB_PATH, ORIGINAL_VOCAB_PATH
+from tensorshake.prepare_corpus import MODERN_VOCAB_MAX, ORIGINAL_VOCAB_MAX
 
 tf.app.flags.DEFINE_string("en_train", MODERN_TRAIN_IDS_PATH, "modern train ids path")
 tf.app.flags.DEFINE_string("fr_train", ORIGINAL_TRAIN_IDS_PATH, "original train ids path")
@@ -75,7 +75,6 @@ tf.app.flags.DEFINE_string("fr_vocab", ORIGINAL_VOCAB_PATH, "original vocab path
 
 tf.app.flags.DEFINE_integer("en_vocab_size", MODERN_VOCAB_MAX, "modern vocabulary size")
 tf.app.flags.DEFINE_integer("fr_vocab_size", ORIGINAL_VOCAB_MAX, "original vocabulary size")
-
 
 FLAGS = tf.app.flags.FLAGS
 

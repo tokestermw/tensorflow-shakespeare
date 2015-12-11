@@ -18,10 +18,14 @@ pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.5.0
 3. Builds vocabulary
 4. Converts parallel data into ids
 
+From the root directory:
+
 ```
-python -m translate.get_data
-python -m translate.prepare_corpus
+python -m tensorshake.translate.get_data
+python -m tensorshake.translate.prepare_corpus
 ```
+
+Delete /cache.
 
 ## Train
 
@@ -50,8 +54,8 @@ call her forth to me . |bring her out to me .
 
 *This repo* (Modern English -> Shakespeare)
 
-| Input | Output
------
+| Input | Output 
+----- | ---
 
 
 ## Possible improvements
