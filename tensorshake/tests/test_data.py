@@ -3,12 +3,9 @@ Test if the data is inputted correctly.
 """
 from itertools import izip
 
-from . import CACHE_DIR
-from .get_data import MODERN_TRAIN_PATH, ORIGINAL_TRAIN_PATH
-from .prepare_corpus import MODERN_TRAIN_IDS_PATH, MODERN_DEV_IDS_PATH, ORIGINAL_TRAIN_IDS_PATH, ORIGINAL_DEV_IDS_PATH
-from .prepare_corpus import MODERN_VOCAB_PATH, ORIGINAL_VOCAB_PATH
-from .prepare_corpus import MODERN_VOCAB_MAX, ORIGINAL_VOCAB_MAX
-from .prepare_corpus import tokenizer
+from tensorshake.get_data import MODERN_TRAIN_PATH, ORIGINAL_TRAIN_PATH
+from tensorshake.prepare_corpus import MODERN_TRAIN_IDS_PATH, MODERN_DEV_IDS_PATH, ORIGINAL_TRAIN_IDS_PATH, ORIGINAL_DEV_IDS_PATH
+from tensorshake.prepare_corpus import MODERN_VOCAB_PATH, ORIGINAL_VOCAB_PATH
 
 
 # -- prepare cache first
