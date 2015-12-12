@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 Simple code:
 1. get parallel Shakespeare data
@@ -44,9 +45,11 @@ def get_shakespeare_parallel_set():
                 with open(os.path.join(get_dir(aligned_data), filename), 'r') as f:
                     for line in f:
                         if '_modern.snt.aligned' in filename:
-                            modern_file.write(line)
+                            modern_file.write(line.strip())
+                            modern_file.write('\n')
                         elif '_original.snt.aligned' in filename:
-                            original_file.write(line)
+                            original_file.write(line.strip())
+                            original_file.write('\n')
                         else:
                             pass
 

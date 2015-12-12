@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 Build vocab with a set max vocab size.
 Build token ids given the vocab.
@@ -8,7 +9,8 @@ from __future__ import unicode_literals, print_function, division
 import os
 import subprocess
 import re
-# from nltk import word_tokenize
+from unidecode import unidecode
+from nltk import word_tokenize
 
 from tensorshake import CACHE_DIR
 from tensorshake.translate.data_utils import create_vocabulary, data_to_token_ids
@@ -19,29 +21,34 @@ from tensorshake.get_data import MODERN_PATH, ORIGINAL_PATH, MODERN_TRAIN_PATH, 
 MODERN_VOCAB_FILENAME = "all_modern.vocab"
 ORIGINAL_VOCAB_FILENAME = "all_original.vocab"
 
-MODERN_VOCAB_MAX = 10000
-ORIGINAL_VOCAB_MAX = 10000
+MODERN_VOCAB_MAX = 12000
+ORIGINAL_VOCAB_MAX = 12000
 
 IDS_SUFFIX = ".ids"
 
 MODERN_VOCAB_PATH = os.path.join(CACHE_DIR, MODERN_VOCAB_FILENAME)
 ORIGINAL_VOCAB_PATH = os.path.join(CACHE_DIR, ORIGINAL_VOCAB_FILENAME)
 
-MODERN_TRAIN_IDS_PATH = os.path.join(CACHE_DIR, "all_modern" + TRAIN_SUFFIX + ".ids")
-MODERN_DEV_IDS_PATH = os.path.join(CACHE_DIR, "all_modern" + DEV_SUFFIX + ".ids")
-ORIGINAL_TRAIN_IDS_PATH = os.path.join(CACHE_DIR, "all_original" + TRAIN_SUFFIX + ".ids")
-ORIGINAL_DEV_IDS_PATH = os.path.join(CACHE_DIR, "all_original" + DEV_SUFFIX + ".ids")
+MODERN_TRAIN_IDS_PATH = os.path.join(CACHE_DIR, "all_modern" + TRAIN_SUFFIX + IDS_SUFFIX)
+MODERN_DEV_IDS_PATH = os.path.join(CACHE_DIR, "all_modern" + DEV_SUFFIX + IDS_SUFFIX)
+ORIGINAL_TRAIN_IDS_PATH = os.path.join(CACHE_DIR, "all_original" + TRAIN_SUFFIX + IDS_SUFFIX)
+ORIGINAL_DEV_IDS_PATH = os.path.join(CACHE_DIR, "all_original" + DEV_SUFFIX + IDS_SUFFIX)
 
 _WORD_SPLIT = re.compile("([.,!?\"':;)(])")
 
 
-def tokenizer(sentence):
+def _tokenizer(sentence):
     """Very basic tokenizer: split the sentence into a list of tokens + lower()."""
-    # return word_tokenize(sentence)
     words = []
     for space_separated_fragment in sentence.lower().strip().split():
         words.extend(re.split(_WORD_SPLIT, space_separated_fragment))
     return [w for w in words if w]
+
+
+def tokenizer(sentence):
+    sentence = sentence.strip().lower()
+    sentence = unidecode(sentence)
+    return word_tokenize(sentence)
 
 
 def build_vocab():
