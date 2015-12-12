@@ -32,6 +32,8 @@ import tensorflow as tf
 
 from tensorshake.translate import data_utils
 from tensorshake.translate import seq2seq_model
+from tensorshake.prepare_corpus import tokenizer
+
 from tensorflow.python.platform import gfile
 
 tf.app.flags.DEFINE_float("learning_rate", 0.5, "Learning rate.")
@@ -239,7 +241,7 @@ def decode():
     sentence = sys.stdin.readline()
     while sentence:
       # Get token-ids for the input sentence.
-      token_ids = data_utils.sentence_to_token_ids(sentence, en_vocab)
+      token_ids = data_utils.sentence_to_token_ids(sentence, en_vocab, tokenizer=tokenizer)
       # Which bucket does it belong to?
       bucket_id = min([b for b in xrange(len(_buckets))
                        if _buckets[b][0] > len(token_ids)])
