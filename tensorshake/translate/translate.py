@@ -82,7 +82,7 @@ FLAGS = tf.app.flags.FLAGS
 
 # We use a number of buckets and pad to the closest one for efficiency.
 # See seq2seq_model.Seq2SeqModel for details of how they work.
-_buckets = [(5, 10), (10, 15), (20, 25), (40, 50), (70, 80), (180, 198)] # TODO: maybe filter out long sentences?
+_buckets = [(5, 10), (10, 15), (20, 25), (40, 50)] #, (70, 80), (180, 198)] # TODO: maybe filter out long sentences?
 
 
 def read_data(source_path, target_path, max_size=None):
