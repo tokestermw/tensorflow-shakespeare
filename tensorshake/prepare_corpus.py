@@ -45,7 +45,7 @@ def _tokenizer(sentence):
     return [w for w in words if w]
 
 
-def tokenizer(sentence):
+def tokenizer(sentence): # TODO: not working for apostrophes
     sentence = sentence.strip().lower()
     sentence = unidecode(sentence)
     return word_tokenize(sentence)

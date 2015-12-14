@@ -41,7 +41,7 @@ def get_shakespeare_parallel_set():
 
     for aligned_data in DATA_LINKS:
         for root, dirs, filenames in os.walk(get_dir(aligned_data)):
-            for filename in filenames:
+            for filename in sorted(filenames):
                 with open(os.path.join(get_dir(aligned_data), filename), 'r') as f:
                     for line in f:
                         if '_modern.snt.aligned' in filename:

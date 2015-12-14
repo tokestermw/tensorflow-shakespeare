@@ -82,7 +82,7 @@ FLAGS = tf.app.flags.FLAGS
 
 # We use a number of buckets and pad to the closest one for efficiency.
 # See seq2seq_model.Seq2SeqModel for details of how they work.
-_buckets = [(5, 10), (10, 15), (20, 25), (40, 50)]
+_buckets = [(5, 10), (10, 15), (20, 25), (40, 50), (70, 80), (180, 198)] # TODO: maybe filter out long sentences?
 
 
 def read_data(source_path, target_path, max_size=None):
@@ -136,7 +136,8 @@ def create_model(session, forward_only):
     model.saver.restore(session, ckpt.model_checkpoint_path)
   else:
     print("Created model with fresh parameters.")
-    session.run(tf.variables.initialize_all_variables())
+    # session.run(tf.variables.initialize_all_variables())
+    session.run(tf.initialize_all_variables())
   return model
 
 
@@ -270,7 +271,8 @@ def self_test():
     # Create model with vocabularies of 10, 2 small buckets, 2 layers of 32.
     model = seq2seq_model.Seq2SeqModel(10, 10, [(3, 3), (6, 6)], 32, 2,
                                        5.0, 32, 0.3, 0.99, num_samples=8)
-    sess.run(tf.variables.initialize_all_variables())
+    # sess.run(tf.variables.initialize_all_variables())
+    sess.run(tf.initialize_all_variables())
 
     # Fake data set for both the (3, 3) and (6, 6) bucket.
     data_set = ([([1, 1], [2, 2]), ([3, 3], [4]), ([5], [6])],
