@@ -63,6 +63,7 @@ Here is a pre-trained model. Download both files into a directory and point to i
 predict using `--decode` option.
 
 https://s3-us-west-2.amazonaws.com/tensorflow-shakespeare/example/checkpoint
+
 https://s3-us-west-2.amazonaws.com/tensorflow-shakespeare/example/translate.ckpt-10400
 
 
