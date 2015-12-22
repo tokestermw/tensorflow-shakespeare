@@ -59,13 +59,7 @@ call her forth to me . |bring her out to me .
 
 ## Pre-Trained Models
 
-Here is a pre-trained model. Download both files into a directory and point to it using `--train_dir` and 
-predict using `--decode` option.
-
-https://s3-us-west-2.amazonaws.com/tensorflow-shakespeare/example/checkpoint
-
-https://s3-us-west-2.amazonaws.com/tensorflow-shakespeare/example/translate.ckpt-10400
-
+bla..
 
 ## Possible improvements
 

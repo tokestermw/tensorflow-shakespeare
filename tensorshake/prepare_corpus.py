@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 Build vocab with a set max vocab size.
 Build token ids given the vocab.
@@ -46,7 +47,10 @@ def _tokenizer(sentence):
 
 def tokenizer(sentence): # TODO: not working for apostrophes
     sentence = sentence.strip().lower()
+    if type(sentence) != unicode:
+        sentence = unicode(sentence, encoding='utf-8', errors='replace')
     sentence = unidecode(sentence)
+    sentence = sentence.replace("' ", "'")
     return word_tokenize(sentence)
 
 
