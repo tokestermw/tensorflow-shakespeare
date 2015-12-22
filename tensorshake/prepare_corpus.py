@@ -1,10 +1,9 @@
-# coding=utf-8
 """
 Build vocab with a set max vocab size.
 Build token ids given the vocab.
 Do get_data.py first.
 """
-from __future__ import unicode_literals, print_function, division
+# from __future__ import unicode_literals, print_function, division
 
 import os
 import subprocess
@@ -21,8 +20,8 @@ from tensorshake.get_data import MODERN_PATH, ORIGINAL_PATH, MODERN_TRAIN_PATH, 
 MODERN_VOCAB_FILENAME = "all_modern.vocab"
 ORIGINAL_VOCAB_FILENAME = "all_original.vocab"
 
-MODERN_VOCAB_MAX = 12000
-ORIGINAL_VOCAB_MAX = 12000
+MODERN_VOCAB_MAX = 5000
+ORIGINAL_VOCAB_MAX = 5000
 
 IDS_SUFFIX = ".ids"
 

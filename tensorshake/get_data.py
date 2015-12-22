@@ -1,10 +1,9 @@
-# coding=utf-8
 """
 Simple code:
 1. get parallel Shakespeare data
 2. store in ./cache folder
 """
-from __future__ import unicode_literals, print_function, division
+# from __future__ import unicode_literals, print_function, division
 
 import os
 import subprocess

@@ -82,7 +82,7 @@ FLAGS = tf.app.flags.FLAGS
 
 # We use a number of buckets and pad to the closest one for efficiency.
 # See seq2seq_model.Seq2SeqModel for details of how they work.
-_buckets = [(5, 10), (10, 15), (20, 25), (40, 50)] #, (70, 80), (180, 198)] # TODO: maybe filter out long sentences?
+_buckets = [(5, 10), (10, 15), (20, 25), (50, 50)] #, (70, 80), (180, 198)] # TODO: maybe filter out long sentences?
 
 
 def read_data(source_path, target_path, max_size=None):
@@ -112,8 +112,8 @@ def read_data(source_path, target_path, max_size=None):
         if counter % 100000 == 0:
           print("  reading data line %d" % counter)
           sys.stdout.flush()
-        source_ids = [int(x) for x in source.split()]
-        target_ids = [int(x) for x in target.split()]
+        source_ids = [int(x) for x in source.split()][:50] # TODO: hmm
+        target_ids = [int(x) for x in target.split()][:50]
         target_ids.append(data_utils.EOS_ID)
         for bucket_id, (source_size, target_size) in enumerate(_buckets):
           if len(source_ids) < source_size and len(target_ids) < target_size:
@@ -125,6 +125,8 @@ def read_data(source_path, target_path, max_size=None):
 
 def create_model(session, forward_only):
   """Create translation model and initialize or load parameters in session."""
+  print("en_vocab_size", FLAGS.en_vocab_size)
+  print("fr_vocab_size", FLAGS.fr_vocab_size)
   model = seq2seq_model.Seq2SeqModel(
       FLAGS.en_vocab_size, FLAGS.fr_vocab_size, _buckets,
       FLAGS.size, FLAGS.num_layers, FLAGS.max_gradient_norm, FLAGS.batch_size,
@@ -152,6 +154,11 @@ def train():
   fr_train = FLAGS.fr_train
   en_dev = FLAGS.en_dev
   fr_dev = FLAGS.fr_dev
+
+  print("en_train", en_train)
+  print("fr_train", fr_train)
+  print("en_dev", en_dev)
+  print("fr_dev", fr_dev)
 
   with tf.Session() as sess:
     # Create model.
@@ -187,11 +194,18 @@ def train():
       start_time = time.time()
       encoder_inputs, decoder_inputs, target_weights = model.get_batch(
           train_set, bucket_id)
+      # print("encoder_inputs", "-"*80)
+      # print(encoder_inputs)
+      # print("decoder_inputs", "-"*80)
+      # print(decoder_inputs)
+      # print("bucket_id", bucket_id)
       _, step_loss, _ = model.step(sess, encoder_inputs, decoder_inputs,
                                    target_weights, bucket_id, False)
       step_time += (time.time() - start_time) / FLAGS.steps_per_checkpoint
       loss += step_loss / FLAGS.steps_per_checkpoint
       current_step += 1
+      print("loss", loss)
+      sys.stdout.flush()
 
       # Once in a while, we save checkpoint, print statistics, and run evals.
       if current_step % FLAGS.steps_per_checkpoint == 0:
@@ -232,6 +246,8 @@ def decode():
                                  # "vocab%d.fr" % FLAGS.fr_vocab_size)
     en_vocab_path = FLAGS.en_vocab
     fr_vocab_path = FLAGS.fr_vocab
+    print("en_vocab_path", FLAGS.en_vocab)
+    print("fr_vocab_path", FLAGS.fr_vocab)
 
     en_vocab, _ = data_utils.initialize_vocabulary(en_vocab_path)
     _, rev_fr_vocab = data_utils.initialize_vocabulary(fr_vocab_path)
@@ -281,6 +297,8 @@ def self_test():
       bucket_id = random.choice([0, 1])
       encoder_inputs, decoder_inputs, target_weights = model.get_batch(
           data_set, bucket_id)
+      print("en", encoder_inputs)
+      print("dec", decoder_inputs)
       model.step(sess, encoder_inputs, decoder_inputs, target_weights,
                  bucket_id, False)
 
