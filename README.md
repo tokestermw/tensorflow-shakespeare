@@ -39,7 +39,7 @@ simply delete/rename the check points.
 
 ## Results
 
-[Benchmarks](http://aclweb.org/anthology/C/C12/C12-1177.pdf) (Shakespeare -> Modern English)
+[Benchmarks from original paper.](http://aclweb.org/anthology/C/C12/C12-1177.pdf) (Shakespeare -> Modern English)
 
 Input | Output
  --- | ---
@@ -52,14 +52,22 @@ benvolio , who began this bloody fray ? | benvolio , who started this bloody fig
 what is your will ? | what do you want ? 
 call her forth to me . |bring her out to me .
 
-*This repo* (Modern English -> Shakespeare)
+*Cherrypicked examples from this repo* (Modern English -> Shakespeare)
 
 | Input | Output 
 ----- | ---
+but you’re not listening to me. | but you do not hear me .
+Gregory, on my word, we will not be humiliated, like carrying coal. | regory , we 'll not carry coals .
+but he got the promotion.  | he is the friend .
+i can hit quickly, if i'm motivated. | i strike , i am moved .
+Did you just give us the finger, sir? | have you leave the thumb , sir ?
+You don’t know what you’re doing! | you do not what you know you .
+have you killed Tybalt? | hast thou slain tybalt ?
+Why, Romeo, are you crazy? | why , art thou mad , mad ?
 
 ## Pre-Trained Models
 
-bla..
+Here is a link for an example model: https://s3-us-west-2.amazonaws.com/foxtype-nlp/tensorshake/model_cache.zip
 
 ## Possible improvements
 
