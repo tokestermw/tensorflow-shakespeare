@@ -23,6 +23,7 @@ import os
 import random
 import sys
 import time
+import pdb
 
 import tensorflow.python.platform
 
@@ -204,7 +205,7 @@ def train():
       step_time += (time.time() - start_time) / FLAGS.steps_per_checkpoint
       loss += step_loss / FLAGS.steps_per_checkpoint
       current_step += 1
-      print("loss", loss)
+      # print("loss", loss)
       sys.stdout.flush()
 
       # Once in a while, we save checkpoint, print statistics, and run evals.
@@ -268,7 +269,9 @@ def decode():
       # Get output logits for the sentence.
       _, _, output_logits = model.step(sess, encoder_inputs, decoder_inputs,
                                        target_weights, bucket_id, True)
+      # TODO: change greedy decoder (either sampled or beam search)
       # This is a greedy decoder - outputs are just argmaxes of output_logits.
+      # pdb.set_trace()
       outputs = [int(np.argmax(logit, axis=1)) for logit in output_logits]
       # If there is an EOS symbol in outputs, cut them at that point.
       if data_utils.EOS_ID in outputs:
@@ -297,8 +300,6 @@ def self_test():
       bucket_id = random.choice([0, 1])
       encoder_inputs, decoder_inputs, target_weights = model.get_batch(
           data_set, bucket_id)
-      print("en", encoder_inputs)
-      print("dec", decoder_inputs)
       model.step(sess, encoder_inputs, decoder_inputs, target_weights,
                  bucket_id, False)
 
@@ -313,3 +314,4 @@ def main(_):
 
 if __name__ == "__main__":
   tf.app.run()
+  
