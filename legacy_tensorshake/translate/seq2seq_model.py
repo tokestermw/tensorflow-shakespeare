@@ -10,8 +10,8 @@ import numpy as np
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 
-from tensorflow.models.rnn import rnn_cell
-from tensorflow.models.rnn import seq2seq
+from tensorflow.contrib import rnn
+from tensorflow.contrib import legacy_seq2seq as seq2seq
 
 from . import data_utils
 
@@ -33,8 +33,8 @@ class Seq2SeqModel(object):
 
   def __init__(self, source_vocab_size, target_vocab_size, buckets, size,
                num_layers, max_gradient_norm, batch_size, learning_rate,
-               learning_rate_decay_factor, use_lstm=False,
-               num_samples=512, forward_only=False):
+               learning_rate_decay_factor, use_lstm=True,
+               num_samples=0, forward_only=False):
     """Create the model.
 
     Args:
@@ -85,18 +85,18 @@ class Seq2SeqModel(object):
       softmax_loss_function = sampled_loss
 
     # Create the internal multi-layer cell for our RNN.
-    single_cell = rnn_cell.GRUCell(size)
+    single_cell = rnn.GRUCell(size)
     if use_lstm:
-      single_cell = rnn_cell.BasicLSTMCell(size)
+      single_cell = rnn.BasicLSTMCell(size)
     cell = single_cell
     if num_layers > 1:
-      cell = rnn_cell.MultiRNNCell([single_cell] * num_layers)
+      cell = rnn.MultiRNNCell([single_cell] * num_layers)
 
     # The seq2seq function: we use embedding for the input and attention.
     def seq2seq_f(encoder_inputs, decoder_inputs, do_decode):
       return seq2seq.embedding_attention_seq2seq(
           encoder_inputs, decoder_inputs, cell, source_vocab_size,
-          target_vocab_size, output_projection=output_projection,
+          target_vocab_size, size, output_projection=output_projection,
           feed_previous=do_decode)
 
     # Feeds for inputs.
@@ -120,7 +120,7 @@ class Seq2SeqModel(object):
     if forward_only:
       self.outputs, self.losses = seq2seq.model_with_buckets(
           self.encoder_inputs, self.decoder_inputs, targets,
-          self.target_weights, buckets, self.target_vocab_size,
+          self.target_weights, buckets, #self.target_vocab_size,
           lambda x, y: seq2seq_f(x, y, True),
           softmax_loss_function=softmax_loss_function)
       # If we use output projection, we need to project outputs for decoding.
@@ -132,7 +132,7 @@ class Seq2SeqModel(object):
     else:
       self.outputs, self.losses = seq2seq.model_with_buckets(
           self.encoder_inputs, self.decoder_inputs, targets,
-          self.target_weights, buckets, self.target_vocab_size,
+          self.target_weights, buckets, #self.target_vocab_size,
           lambda x, y: seq2seq_f(x, y, False),
           softmax_loss_function=softmax_loss_function)
 
@@ -151,7 +151,8 @@ class Seq2SeqModel(object):
         self.updates.append(opt.apply_gradients(
             zip(clipped_gradients, params), global_step=self.global_step))
 
-    self.saver = tf.train.Saver(tf.all_variables())
+    # self.saver = tf.train.Saver(tf.all_variables())
+    self.saver = tf.train.Saver(tf.global_variables())
 
   def step(self, session, encoder_inputs, decoder_inputs, target_weights,
            bucket_id, forward_only):

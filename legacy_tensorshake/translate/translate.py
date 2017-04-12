@@ -44,8 +44,8 @@ tf.app.flags.DEFINE_float("max_gradient_norm", 5.0,
                           "Clip gradients to this norm.")
 tf.app.flags.DEFINE_integer("batch_size", 64,
                             "Batch size to use during training.")
-tf.app.flags.DEFINE_integer("size", 1024, "Size of each model layer.")
-tf.app.flags.DEFINE_integer("num_layers", 3, "Number of layers in the model.")
+tf.app.flags.DEFINE_integer("size", 128, "Size of each model layer.")
+tf.app.flags.DEFINE_integer("num_layers", 1, "Number of layers in the model.")
 tf.app.flags.DEFINE_string("data_dir", "/tmp", "Data directory")
 tf.app.flags.DEFINE_string("train_dir", "/tmp", "Training directory.")
 tf.app.flags.DEFINE_integer("max_train_data_size", 0,
@@ -140,7 +140,9 @@ def create_model(session, forward_only):
   else:
     print("Created model with fresh parameters.")
     # session.run(tf.variables.initialize_all_variables())
-    session.run(tf.initialize_all_variables())
+#    session.run(tf.initialize_all_variables())
+    session.run(tf.local_variables_initializer())
+    session.run(tf.global_variables_initializer())
   return model
 
 
@@ -291,7 +293,9 @@ def self_test():
     model = seq2seq_model.Seq2SeqModel(10, 10, [(3, 3), (6, 6)], 32, 2,
                                        5.0, 32, 0.3, 0.99, num_samples=8)
     # sess.run(tf.variables.initialize_all_variables())
-    sess.run(tf.initialize_all_variables())
+    # sess.run(tf.initialize_all_variables())
+    sess.run(tf.local_variables_initializer())
+    sess.run(tf.global_variables_initializer())
 
     # Fake data set for both the (3, 3) and (6, 6) bucket.
     data_set = ([([1, 1], [2, 2]), ([3, 3], [4]), ([5], [6])],

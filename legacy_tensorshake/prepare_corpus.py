@@ -37,18 +37,10 @@ ORIGINAL_DEV_IDS_PATH = os.path.join(CACHE_DIR, "all_original" + DEV_SUFFIX + ID
 _WORD_SPLIT = re.compile("([.,!?\"':;)(])")
 
 
-def _tokenizer(sentence):
-    """Very basic tokenizer: split the sentence into a list of tokens + lower()."""
-    words = []
-    for space_separated_fragment in sentence.lower().strip().split():
-        words.extend(re.split(_WORD_SPLIT, space_separated_fragment))
-    return [w for w in words if w]
-
-
 def tokenizer(sentence): # TODO: not working for apostrophes
     sentence = sentence.strip().lower()
-    if type(sentence) != unicode:
-        sentence = unicode(sentence, encoding='utf-8', errors='replace')
+    # if type(sentence) != unicode:
+        # sentence = unicode(sentence, encoding='utf-8', errors='replace')
     sentence = unidecode(sentence)
     sentence = sentence.replace("' ", "'")
     return word_tokenize(sentence)

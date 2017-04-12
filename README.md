@@ -1,3 +1,5 @@
+## Update to TensorFlow 1.0 with Google seq2seq library
+
 # Shakespeare translations using TensorFlow
 
 This is an example of using the new Google's [TensorFlow](https://github.com/tensorflow/tensorflow) library on
