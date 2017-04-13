@@ -47,7 +47,7 @@ class Encoder(snt.AbstractModule):
             final_state = final_state[0]  # assuming h is first dimension
 
         encoder_outputs = rnn_outputs
-        return encoder_outputs, self._sequence_length
+        return encoder_outputs
 
 
 class Decoder(snt.AbstractModule):
@@ -59,18 +59,20 @@ class Decoder(snt.AbstractModule):
         self._vocab_size = vocab_size
         self._embedding_dim = embedding_dim
         self._rnn_hidden_dim = rnn_hidden_dim
-        self._attention_hidden_dims = attention_hidden_dims
 
+        self._add_attention = add_attention
+        self._attention_hidden_dims = attention_hidden_dims
         self._attention_type = attention_type
 
         with self._enter_variable_scope():
             self._embedding_layer = snt.Embed(
                 vocab_size, embedding_dim, existing_vocab=None)
 
-            if attention_type == "luong":
-                self._create_attention_mechanism = seq2seq.LuongAttention
-            elif attention_type == "bahdanaeu":
-                self._create_attention_mechanism = seq2seq.BahdanauAttention
+            if self._add_attention:
+                if attention_type == "luong":
+                    self._create_attention_mechanism = seq2seq.LuongAttention
+                elif attention_type == "bahdanaeu":
+                    self._create_attention_mechanism = seq2seq.BahdanauAttention
 
             self._cell = snt.LSTM(rnn_hidden_dim, name="decoder_lstm")
 
@@ -83,16 +85,19 @@ class Decoder(snt.AbstractModule):
         # TODO: use GreedyEmbeddingsHelper for inference
         helper = seq2seq.TrainingHelper(embedding_outputs, decoder_sequence_length)
 
-        attention_mechanism = self._create_attention_mechanism(
-            num_units=self._attention_hidden_dims,
-            memory=encoder_outputs,
-            memory_sequence_length=encoder_sequence_length)
+        cell = self._cell
 
-        cell = seq2seq.DynamicAttentionWrapper(
-            self._cell,
-            attention_mechanism,
-            attention_size=self._attention_hidden_dims,
-            output_attention=True if self._attention_type == "luong" else False)
+        if self._add_attention:
+            attention_mechanism = self._create_attention_mechanism(
+                num_units=self._attention_hidden_dims,
+                memory=encoder_outputs,
+                memory_sequence_length=encoder_sequence_length)
+
+            cell = seq2seq.DynamicAttentionWrapper(
+                cell,
+                attention_mechanism,
+                attention_size=self._attention_hidden_dims,
+                output_attention=True if self._attention_type == "luong" else False)
 
         decoder = seq2seq.BasicDecoder(
             cell=cell,
@@ -100,11 +105,10 @@ class Decoder(snt.AbstractModule):
             initial_state=cell.zero_state(
                 dtype=tf.float32, batch_size=batch_size))
 
-        rnn_outputs, final_state = seq2seq.dynamic_decode(decoder)
+        final_outputs, final_state = seq2seq.dynamic_decode(decoder)
 
-        decoder_outputs = rnn_outputs
+        decoder_outputs = final_outputs.rnn_output
         return decoder_outputs
-
 
 
 class Seq2Seq(snt.AbstractModule):
@@ -118,10 +122,10 @@ def _test():
     target_sequence_length = [4, 4]
 
     encoder = Encoder(4, num_rnn_layers=2, sequence_length=source_sequence_length)
-    decoder = Decoder(4)
+    decoder = Decoder(4, add_attention=True)
 
-    encoder_outputs, sequence_length = encoder(source)
-    decoder_outputs = decoder(encoder_outputs, sequence_length, target, target_sequence_length)
+    encoder_outputs = encoder(source)
+    decoder_outputs = decoder(encoder_outputs, source_sequence_length, target, target_sequence_length)
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
