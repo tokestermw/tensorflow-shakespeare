@@ -14,5 +14,5 @@ pytz==2017.2
 PyYAML==3.12
 # -e git+https://github.com/google/seq2seq.git@761c393893af7f224eed8c39521df85354837279#egg=seq2seq
 six==1.10.0
-tensorflow==1.0.0
+# tensorflow==1.1.0rc1
 Unidecode==0.4.20

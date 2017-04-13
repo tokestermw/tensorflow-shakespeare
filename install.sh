@@ -3,7 +3,7 @@ virtualenv .
 
 source bin/activate
 
-# pip install -r requirements.txt
+pip install -r requirements.txt
 pip install --upgrade \
  https://storage.googleapis.com/tensorflow/mac/cpu/tensorflow-1.1.0rc1-py2-none-any.whl
  
