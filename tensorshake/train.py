@@ -22,6 +22,16 @@ flags.DEFINE_string("target_train", shake_data.default_original_train_path, (
 flags.DEFINE_string("target_dev", shake_data.default_original_dev_path, (
     ""))
 
+flags.DEFINE_integer("batch_size", 32, (
+    ""))
+
+flags.DEFINE_string("optimizer_type", "adam", (
+    ""))
+flags.DEFINE_float("learning_rate", 1e-4, (
+    ""))
+flags.DEFINE_float("max_grads", 5.0, (
+    ""))
+
 FLAGS = flags.FLAGS
 
 
@@ -62,6 +72,25 @@ def start_threads(thread_fn, args, n_threads=1):
     return threads
 
 
+def set_train_op(loss, tvars):
+    # TODO: initializer all optimizers? so can be used later
+    if FLAGS.optimizer_type == "sgd":
+        optimizer = tf.train.GradientDescentOptimizer(learning_rate=FLAGS.learning_rate)
+    elif FLAGS.optimizer_type == "rmsprop":
+        optimizer = tf.train.RMSPropOptimizer(learning_rate=FLAGS.learning_rate)
+    elif FLAGS.optimizer_type == "adam":
+        optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)
+    else:
+        raise ValueError("Wrong optimizer_type.")
+
+    gradients = optimizer.compute_gradients(loss, var_list=tvars)
+    clipped_gradients = [(grad if grad is None else tf.clip_by_norm(grad, FLAGS.max_grads), var)
+                         for grad, var in gradients]
+
+    train_op = optimizer.apply_gradients(clipped_gradients)
+    return train_op
+
+
 def main(_argv):
     source_word2idx, source_idx2word = shake_data.build_vocab(FLAGS.source_train)
     target_word2idx, target_idx2word = shake_data.build_vocab(FLAGS.target_train)    
@@ -71,24 +100,48 @@ def main(_argv):
     seq2seq_model = shake_model.Seq2Seq(encoder, decoder)
 
     enqueue_data, dequeue_batch = get_input_queues(
-        FLAGS.source_train, source_word2idx, FLAGS.target_train, target_word2idx)
+        FLAGS.source_train, source_word2idx, FLAGS.target_train, target_word2idx,
+        batch_size=FLAGS.batch_size)
 
     cost = seq2seq_model(*dequeue_batch)
-    # train_op
+    tvars = tf.trainable_variables()
+    train_op = set_train_op(cost, tvars)
 
-    with tf.train.SingularMonitoredSession(checkpoint_dir=FLAGS.model_dir) as sess:
+    saver = tf.train.Saver()
+
+    hooks = [
+        # TODO: enqueue operation errors out using this hook
+        # tf.train.LoggingTensorHook({
+        #     "cost": cost, 
+        #     "global_step": seq2seq_model._global_step,
+        # }, every_n_iter=10),
+        tf.train.StepCounterHook(),
+        tf.train.CheckpointSaverHook(
+            checkpoint_dir=FLAGS.model_dir,
+            save_steps=100,
+            saver=saver)
+    ]
+
+    scaffold = tf.train.Scaffold(
+        init_op=None,
+        init_feed_dict=None,
+        init_fn=None,
+        ready_op=None,
+        ready_for_local_init_op=None,
+        local_init_op=None,
+        summary_op=None,
+        saver=saver)
+
+    with tf.train.SingularMonitoredSession(hooks=hooks, checkpoint_dir=FLAGS.model_dir, scaffold=scaffold) as sess:
         start_threads(enqueue_data, (sess, ))
 
-        # while True:
-        #     a, b = sess.run(dequeue_batch)
-        #     print(a.shape, b.shape)
-        #     print(a)
-        #     print(b)
-
         while True:
-            c = sess.run(cost)
-            print(c)
+            _, c, _ = sess.run(
+                [train_op, cost, seq2seq_model._increment_global_step])
+            if step % 100 == 0:
+                tf.logging.info("Train loss: %.4f", c)
 
 
 if __name__ == "__main__":
+    tf.logging.set_verbosity(tf.logging.INFO)
     tf.app.run()
