@@ -19,6 +19,7 @@ default_original_train_path = os.path.join(DEFAULT_DATA_DIR, "all_original.snt.a
 default_original_dev_path = os.path.join(DEFAULT_DATA_DIR, "all_original.snt.aligned_dev")
 
 SPECIAL_TOKENS = {"_PAD": 0, "_OOV": 1, "_START": 2, "_END": 3}
+MAXLEN = 100
 
 
 def _read_data(path):
@@ -58,6 +59,7 @@ def tokenize(text):
 
 def vectorize(tokens, vocab):
     vector = [vocab.get(token, SPECIAL_TOKENS["_OOV"]) for token in tokens]
+    vector = vector[:(MAXLEN - 2)]
     vector = [SPECIAL_TOKENS["_START"]] + vector + [SPECIAL_TOKENS["_END"]]
     return vector
 
@@ -117,7 +119,11 @@ def _test():
     vector = vectorize(tokens, source_vocab[0])
 
     for i_, j_ in data_iterator(default_modern_train_path, source_vocab[0], default_modern_train_path, target_vocab[0]):
-        print(i_)
+        print(i_.shape, j_.shape)
+        if sum(i_.shape) != sum(j_.shape):
+            import pdb
+            pdb.set_trace()
+            a = None
 
 
 if __name__ == "__main__":
