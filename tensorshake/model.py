@@ -9,6 +9,8 @@ import sonnet as snt
 
 from tensorflow.python.layers import core as layers_core
 
+import layers as shake_layers
+
 MAXLEN = 100
 
 
@@ -35,7 +37,9 @@ class Encoder(snt.AbstractModule):
         self._reverse_sequence = reverse_sequence
 
         with self._enter_variable_scope():
-            self._embedding_layer = snt.Embed(
+            # self._embedding_layer = snt.Embed(
+            #     vocab_size, embedding_dim, existing_vocab=None)
+            self._embedding_layer = shake_layers.Embedding(
                 vocab_size, embedding_dim, existing_vocab=None)
 
             rnn_cell = lambda i: snt.LSTM(rnn_hidden_dim, name="lstm_{}".format(i))
@@ -86,7 +90,6 @@ class Decoder(snt.AbstractModule):
     def __init__(self, vocab_size,
                  embedding_dim=128,
                  rnn_hidden_dim=128,
-                 output_hidden_dim=128,
                  attention_hidden_dims=128,
                  rnn_type="lstm",
                  add_attention=False,
@@ -103,7 +106,9 @@ class Decoder(snt.AbstractModule):
         self._attention_type = attention_type
 
         with self._enter_variable_scope():
-            self._embedding_layer = snt.Embed(
+            # self._embedding_layer = snt.Embed(
+            #     vocab_size, embedding_dim, existing_vocab=None)
+            self._embedding_layer = shake_layers.Embedding(
                 vocab_size, embedding_dim, existing_vocab=None)
 
             if self._add_attention:
@@ -128,6 +133,7 @@ class Decoder(snt.AbstractModule):
         batch_size = tf.shape(encoder_outputs)[0]
 
         if is_inference:
+            # TODO: if only doing inference, this hasn't gone instantiated.
             embedding_matrix = self._embedding_layer.embeddings
             helper = seq2seq.GreedyEmbeddingHelper(
                 embedding_matrix, start_tokens=tf.tile([2], [batch_size]), end_token=3)
@@ -174,7 +180,8 @@ class Decoder(snt.AbstractModule):
             cell=cell,
             helper=helper,
             initial_state=initial_state,
-            output_layer=self._output_layer)  # .rnn_output will include calculations of the output layer
+            # .rnn_output will include calculations of the output layer if output_layer is not None
+            output_layer=self._output_layer)
 
         final_outputs, final_state = seq2seq.dynamic_decode(decoder, maximum_iterations=MAXLEN)
         return final_outputs.rnn_output
@@ -218,11 +225,13 @@ class Seq2Seq(snt.AbstractModule):
         is_inference = decoder_word_ids is None
 
         with tf.device("/cpu:0"):
-            encoder_inputs, encoder_sequence_length = self.preprocess_encoder(encoder_word_ids)
+            encoder_inputs, encoder_sequence_length = self.preprocess_encoder(
+                encoder_word_ids)
             decoder_source_inputs, decoder_target_inputs, decoder_sequence_length = self.preprocess_decoder(
-                    decoder_word_ids)
+                decoder_word_ids)
 
-        encoder_outputs, encoder_final_state = self._encoder(encoder_inputs, encoder_sequence_length)
+        encoder_outputs, encoder_final_state = self._encoder(
+            encoder_inputs, encoder_sequence_length)
 
         decoder_outputs = self._decoder(
             encoder_outputs, encoder_final_state, encoder_sequence_length,
@@ -244,7 +253,9 @@ class Seq2Seq(snt.AbstractModule):
         cost = tf.reduce_mean(loss)
         return cost
 
-    def generate(self, decoder_outputs):
+    # TODO: add other stuff like tokenizer, vectorizer?
+    @staticmethod
+    def generate(decoder_outputs):
         sampled_word_ids = tf.argmax(decoder_outputs, axis=-1)
         return sampled_word_ids
 
