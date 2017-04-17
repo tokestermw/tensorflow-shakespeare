@@ -77,6 +77,8 @@ def batch_and_pad(list_of_vectors, maxlen=None):
 def data_iterator(source_path, source_vocab, target_path, target_vocab, batch_size=32, maxlen=100):
     batch_source, batch_target, batch_counter = [], [], 0
 
+    # TODO: randomize
+
     for source_text, target_text in izip(_read_data(source_path), _read_data(target_path)):
         source_tokens = tokenize(source_text)
         source_vector = vectorize(source_tokens, source_vocab)

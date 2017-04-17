@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 virtualenv .
 #python -m venv .
 
