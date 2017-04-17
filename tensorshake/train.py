@@ -134,12 +134,14 @@ def main(_argv):
 
     tf.logging.info("source vocab size: %i target vocab size: %i", source_vocab_size, target_vocab_size)
 
-    encoder = shake_model.Encoder(source_vocab_size,
-                                  num_rnn_layers=FLAGS.num_rnn_layers,
-                                  is_bidi=FLAGS.is_bidi,
-                                  reverse_sequence=FLAGS.reverse_sequence)
-    decoder = shake_model.Decoder(target_vocab_size,
-                                  add_attention=FLAGS.add_attention)
+    encoder = shake_model.Encoder(
+        source_vocab_size,
+        num_rnn_layers=FLAGS.num_rnn_layers,
+        is_bidi=FLAGS.is_bidi,
+        reverse_sequence=FLAGS.reverse_sequence)
+    decoder = shake_model.Decoder(
+        target_vocab_size,
+        add_attention=FLAGS.add_attention)
     seq2seq_model = shake_model.Seq2Seq(encoder, decoder)
 
     enqueue_data, dequeue_batch = get_input_queues(
@@ -158,8 +160,7 @@ def main(_argv):
     tvars = tf.trainable_variables()
     train_op = set_train_op(cost, tvars)
 
-    global_step = seq2seq_model._increment_global_step
-    increment = seq2seq_model._global_step
+    increment = seq2seq_model._increment_global_step
 
     saver = tf.train.Saver()
 
@@ -189,8 +190,8 @@ def main(_argv):
         start_threads(enqueue_data, (sess, ), n_threads=1)
 
         while True:
-            _, c, _, step = sess.run(
-                [train_op, cost, increment, global_step])
+            _, c, step = sess.run(
+                [train_op, cost, increment])
 
             if step % FLAGS.logging_frequency == 0:
                 tf.logging.info("Global step: %i", step)
