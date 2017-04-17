@@ -78,6 +78,7 @@ class Encoder(snt.AbstractModule):
 
             final_state = final_state[-1]  # last RNN layer output
 
+        # TODO: output projection layer?
         return rnn_outputs, final_state
 
 
@@ -110,12 +111,15 @@ class Decoder(snt.AbstractModule):
                     self._create_attention_mechanism = seq2seq.LuongAttention
                 elif attention_type == "bahdanaeu":
                     self._create_attention_mechanism = seq2seq.BahdanauAttention
+                else:
+                    raise ValueError("Wrong attention_type.")
 
             self._cell = snt.LSTM(rnn_hidden_dim, name="decoder_lstm")
 
             # TODO: tied weights
             # self._output_layer = snt.Linear(vocab_size, name="output_projection")
-            self._output_layer = layers_core.Dense(vocab_size, use_bias=False, name="output_projection")
+            self._output_layer = layers_core.Dense(
+                vocab_size, use_bias=False, trainable=True, name="output_projection")
 
     def _build(self, encoder_outputs, encoder_final_state, encoder_sequence_length,
                decoder_inputs=None, decoder_sequence_length=None):
@@ -128,6 +132,7 @@ class Decoder(snt.AbstractModule):
             helper = seq2seq.GreedyEmbeddingHelper(
                 embedding_matrix, start_tokens=tf.tile([2], [batch_size]), end_token=3)
         else:
+            # TODO: add scheduled sampling option
             batch_embedding_layer = snt.BatchApply(self._embedding_layer)
             embedding_outputs = batch_embedding_layer(decoder_inputs)
 
@@ -164,6 +169,7 @@ class Decoder(snt.AbstractModule):
         else:
             initial_state = encoder_final_state
 
+        # TODO: add beam search decoder
         decoder = seq2seq.BasicDecoder(
             cell=cell,
             helper=helper,
