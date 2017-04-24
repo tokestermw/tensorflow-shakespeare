@@ -18,6 +18,12 @@ default_modern_dev_path = os.path.join(DEFAULT_DATA_DIR, "all_modern.snt.aligned
 default_original_train_path = os.path.join(DEFAULT_DATA_DIR, "all_original.snt.aligned_train")
 default_original_dev_path = os.path.join(DEFAULT_DATA_DIR, "all_original.snt.aligned_dev")
 
+DEFAULT_EMBEDDINGS_DIR = "embeddings"
+default_glove_6B_50d_path = os.path.join(DEFAULT_EMBEDDINGS_DIR, "glove.6B.50d.txt")
+default_glove_6B_100d_path = os.path.join(DEFAULT_EMBEDDINGS_DIR, "glove.6B.100d.txt")
+default_glove_6B_200d_path = os.path.join(DEFAULT_EMBEDDINGS_DIR, "glove.6B.200d.txt")
+default_glove_6B_300d_path = os.path.join(DEFAULT_EMBEDDINGS_DIR, "glove.6B.300d.txt")
+
 SPECIAL_TOKENS = {"_PAD": 0, "_OOV": 1, "_START": 2, "_END": 3}
 MAXLEN = 100
 
@@ -109,12 +115,55 @@ def build_vocab(path, max_vocab=10000, min_counts=5):
     return word2idx, idx2word
 
 
+@shake_utils.cache
+def build_vocab_with_embeddings(path, max_vocab=10000, min_counts=None):
+    embeddings = []
+
+    with open(path, 'r') as f:
+        for idx, line in enumerate(f):
+            if idx >= max_vocab:
+                break
+            elements = line.split()
+            word = elements[0]
+            neurons = map(float, elements[1:])
+            embeddings.append((word, neurons))
+
+    hidden_dim = len(neurons)
+    bump = len(SPECIAL_TOKENS)
+
+    word2idx = {word: idx + bump for idx, (word, neurons) in enumerate(embeddings)}
+    word2idx.update(SPECIAL_TOKENS)
+    idx2word = [i[0] for i in sorted(word2idx.iteritems(), key=lambda x: x[1])]
+
+    vocab_size = len(word2idx)
+
+    embedding_matrix = np.zeros(shape=(vocab_size, hidden_dim), 
+        dtype=np.float32)
+
+    vocab_size = len(word2idx)
+
+    for i in range(bump):
+        if i == 0:
+            embedding_matrix[i, :] = np.zeros(hidden_dim, dtype=np.float32)
+        else:
+            span = np.sqrt(6. / (hidden_dim + vocab_size))  # xavier uniform
+            embedding_matrix[i, :] = np.random.uniform(-span, span, hidden_dim)
+
+    for idx, (word, neurons) in enumerate(embeddings):
+        embedding_matrix[idx + bump, :] = np.array(neurons, dtype=np.float32)
+
+    assert len(word2idx) == embedding_matrix.shape[0]
+    return word2idx, idx2word, embedding_matrix
+
+
 def _test():
     _check_parallel_data(default_modern_train_path, default_original_train_path)
     _check_parallel_data(default_modern_dev_path, default_original_dev_path)    
 
     source_vocab = build_vocab(default_modern_train_path)
     target_vocab = build_vocab(default_original_train_path)    
+
+    source_vocab_with_embeddings = build_vocab_with_embeddings(default_glove_6B_50d_path)
 
     text = "how are you?"
     tokens = tokenize(text)
