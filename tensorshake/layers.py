@@ -28,6 +28,11 @@ class Embedding(snt.Embed):
                  trainable=True,
                  name="embedding"
                  ):
+        if existing_vocab is not None:
+            vocab_size = None
+            embed_dim = None
+            initializers = None
+            partitioners = None
         super(Embedding, self).__init__(
             vocab_size=vocab_size,
             embed_dim=embed_dim,
@@ -53,6 +58,7 @@ class Embedding(snt.Embed):
                     regularizer=self._regularizers.get(self.EMBEDDINGS, None),
                     trainable=self._trainable)
             else:
+                # TODO: make padding not trainable
                 self._embeddings = tf.get_variable(
                     "embed",
                     dtype=tf.float32,
