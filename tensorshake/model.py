@@ -23,6 +23,11 @@ class Encoder(snt.AbstractModule):
                  is_bidi=False,
                  is_skip_connections=False,
                  reverse_sequence=False,
+                 embedding_matrix=None,
+                 use_batch_norm=False,
+                 trainable=True,
+                 use_sentence_projection=False,
+                 is_train=True,
                  name="encoder"):
         super(Encoder, self).__init__(name=name)
 
@@ -36,15 +41,31 @@ class Encoder(snt.AbstractModule):
         self._is_skip_connections = is_skip_connections
         self._reverse_sequence = reverse_sequence
 
+        self._use_batch_norm = use_batch_norm
+
+        self._embedding_matrix = embedding_matrix
+        self._trainable = trainable
+        self._use_sentence_projection = use_sentence_projection
+
+        self._is_train = is_train
+
         with self._enter_variable_scope():
+            # TODO: use glove vectors as inits
             # self._embedding_layer = snt.Embed(
             #     vocab_size, embedding_dim, existing_vocab=None)
             self._embedding_layer = shake_layers.Embedding(
-                vocab_size, embedding_dim, existing_vocab=None)
+                vocab_size, embedding_dim, existing_vocab=embedding_matrix, trainable=trainable)
 
-            rnn_cell = lambda i: snt.LSTM(rnn_hidden_dim, name="lstm_{}".format(i))
+            rnn_cell = lambda i: snt.LSTM(rnn_hidden_dim, use_batch_norm_h=use_batch_norm, name="lstm_{}".format(i))
+
             rnn_layers = [rnn_cell(i) for i in range(num_rnn_layers)]
             self._cell = snt.DeepRNN(rnn_layers, skip_connections=is_skip_connections)
+
+            if use_sentence_projection:
+                cell_state_size = rnn_layers[0].state_size
+                self._sentence_projection = []
+                for i in range(len(cell_state_size)):
+                    self._sentence_projection.append(snt.Linear(rnn_hidden_dim, name="sentence_projection_{}".format(i)))
 
     def _build(self, encoder_inputs, sequence_length):
         batch_size = tf.shape(encoder_inputs)[0]
@@ -53,8 +74,9 @@ class Encoder(snt.AbstractModule):
         if self._reverse_sequence:
             encoder_inputs = tf.reverse_sequence(encoder_inputs, sequence_length, seq_axis=1)
 
-        batch_embedding_layer = snt.BatchApply(self._embedding_layer)
-        embedding_outputs = batch_embedding_layer(encoder_inputs)
+        embedding_outputs = self._embedding_layer(encoder_inputs)
+
+        # TODO: another projection layer
 
         if self._is_bidi:
             rnn_outputs, (final_state_fw, final_state_bw) = tf.nn.bidirectional_dynamic_rnn(
@@ -82,7 +104,14 @@ class Encoder(snt.AbstractModule):
 
             final_state = final_state[-1]  # last RNN layer output
 
-        # TODO: output projection layer?
+        # TODO: output projection layer for enhanced sentence embedding?
+        if self._use_sentence_projection:
+            projected_final_state = []
+            for i in range(len(final_state)):
+                projected_final_state.append(tf.nn.relu(self._sentence_projection[i](final_state[i])))
+
+            final_state = tuple(projected_final_state)
+
         return rnn_outputs, final_state
 
 
@@ -139,8 +168,7 @@ class Decoder(snt.AbstractModule):
                 embedding_matrix, start_tokens=tf.tile([2], [batch_size]), end_token=3)
         else:
             # TODO: add scheduled sampling option
-            batch_embedding_layer = snt.BatchApply(self._embedding_layer)
-            embedding_outputs = batch_embedding_layer(decoder_inputs)
+            embedding_outputs = self._embedding_layer(decoder_inputs)
 
             helper = seq2seq.TrainingHelper(embedding_outputs, decoder_sequence_length)
 
@@ -192,8 +220,8 @@ class Seq2Seq(snt.AbstractModule):
                  name="seq2seq"):
         super(Seq2Seq, self).__init__(name=name)
 
-        if decoder._add_attention:
-            assert not encoder._reverse_sequence, "Don't reverse sequence when adding attention."
+        # if decoder._add_attention:
+            # assert not encoder._reverse_sequence, "Don't reverse sequence when adding attention."
 
         with self._enter_variable_scope():
             self._encoder = encoder
@@ -255,9 +283,15 @@ class Seq2Seq(snt.AbstractModule):
 
     # TODO: add other stuff like tokenizer, vectorizer?
     @staticmethod
-    def generate(decoder_outputs):
-        sampled_word_ids = tf.argmax(decoder_outputs, axis=-1)
-        return sampled_word_ids
+    def generate(decoder_outputs, k=1):
+        if k == 1:
+            sampled_word_ids = tf.argmax(decoder_outputs, axis=-1)
+            return sampled_word_ids
+        elif k > 1:
+            probs = tf.nn.softmax(decoder_outputs, dim=-1)
+            log_probs = tf.log(probs + 0.0001)
+            beam_values, beam_indices = tf.nn.top_k(log_probs, k=k)
+            return beam_values, beam_indices
 
 
 def _test():
@@ -275,7 +309,11 @@ def _test():
     inference_outputs, _ = seq2seq_model(source)
     sampled_word_ids = seq2seq_model.generate(inference_outputs)
 
+    input_ph = tf.placeholder(dtype=tf.int32, shape=(None, None))
+    output_ph = tf.placeholder(dtype=tf.int32, shape=(None, None))
+    search_outputs, _ = seq2seq_model(input_ph, output_ph)
     with tf.Session() as sess:
+
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
 
@@ -283,6 +321,9 @@ def _test():
         print(c)
         s = sess.run(sampled_word_ids)
         print(s)
+        print(s.shape)
+        o = sess.run(search_outputs, feed_dict={input_ph: [[2, 5, 4, 3]], output_ph: [[2, 3]]})
+        print(o)
 
 
 if __name__ == "__main__":
