@@ -25,8 +25,9 @@ class Encoder(snt.AbstractModule):
                  reverse_sequence=False,
                  embedding_matrix=None,
                  use_batch_norm=False,
-                 trainable=True,
                  use_sentence_projection=False,
+                 use_embedding_projection=False,
+                 trainable=True,
                  is_train=True,
                  name="encoder"):
         super(Encoder, self).__init__(name=name)
@@ -46,6 +47,7 @@ class Encoder(snt.AbstractModule):
         self._embedding_matrix = embedding_matrix
         self._trainable = trainable
         self._use_sentence_projection = use_sentence_projection
+        self._use_embedding_projection = use_embedding_projection
 
         self._is_train = is_train
 
@@ -55,6 +57,9 @@ class Encoder(snt.AbstractModule):
             #     vocab_size, embedding_dim, existing_vocab=None)
             self._embedding_layer = shake_layers.Embedding(
                 vocab_size, embedding_dim, existing_vocab=embedding_matrix, trainable=trainable)
+
+            if use_embedding_projection:
+                self._embedding_projection = snt.Linear(embedding_dim, use_bias=False, name="embedding_projection")
 
             rnn_cell = lambda i: snt.LSTM(rnn_hidden_dim, use_batch_norm_h=use_batch_norm, name="lstm_{}".format(i))
 
@@ -77,6 +82,9 @@ class Encoder(snt.AbstractModule):
         embedding_outputs = self._embedding_layer(encoder_inputs)
 
         # TODO: another projection layer
+        if self._use_embedding_projection:
+            batch_embedding_projection = snt.BatchApply(self._embedding_projection)
+            embedding_outputs = batch_embedding_projection(embedding_outputs)
 
         if self._is_bidi:
             rnn_outputs, (final_state_fw, final_state_bw) = tf.nn.bidirectional_dynamic_rnn(
@@ -115,6 +123,8 @@ class Encoder(snt.AbstractModule):
         return rnn_outputs, final_state
 
 
+# TODO: use tied embeddings
+# TODO: use scheduled sampling
 class Decoder(snt.AbstractModule):
     def __init__(self, vocab_size,
                  embedding_dim=128,
@@ -279,6 +289,7 @@ class Seq2Seq(snt.AbstractModule):
 
         loss = tf.reduce_sum(cross_entropy * mask, axis=1) / sequence_length
         cost = tf.reduce_mean(loss)
+        tf.summary.scalar("cost", cost)
         return cost
 
     # TODO: add other stuff like tokenizer, vectorizer?
