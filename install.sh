@@ -9,16 +9,16 @@ pip install -r requirements.txt
 # https://storage.googleapis.com/tensorflow/mac/cpu/tensorflow-1.1.0rc1-py2-none-any.whl
  
 # -- deepmind sonnet lib
-#git clone --recursive https://github.com/deepmind/sonnet
+git clone --recursive https://github.com/deepmind/sonnet
 # brew install bazel
-#(cd sonnet/tensorflow; ./configure)
+(cd sonnet/tensorflow; ./configure)
 
-#export SONNET_INSTALL_DIR="/tmp/sonnet"
-#(cd sonnet; mkdir -p ${SONNET_INSTALL_DIR})
-#(cd sonnet; bazel clean)
-#(cd sonnet; bazel build --config=opt :install)
-#(cd sonnet; ./bazel-bin/install ${SONNET_INSTALL_DIR})
-#(cd sonnet; pip install ${SONNET_INSTALL_DIR}/*.whl)
+export SONNET_INSTALL_DIR="/tmp/sonnet"
+(cd sonnet; mkdir -p ${SONNET_INSTALL_DIR})
+(cd sonnet; bazel clean)
+(cd sonnet; bazel build --config=opt :install)
+(cd sonnet; ./bazel-bin/install ${SONNET_INSTALL_DIR})
+(cd sonnet; pip install ${SONNET_INSTALL_DIR}/*.whl)
 
 # -- test
 #python -c "
@@ -28,9 +28,9 @@ pip install -r requirements.txt
 #print(out)"
 
  # -- google seq2seq lib
- git clone https://github.com/google/seq2seq.git
- (cd seq2seq; pip install -e .)
+ # git clone https://github.com/google/seq2seq.git
+ # (cd seq2seq; pip install -e .)
 
 # # -- test
  # https://google.github.io/seq2seq/getting_started/#common-installation-issues
- python -m unittest seq2seq.test.pipeline_test
+ # python -m unittest seq2seq.test.pipeline_test
