@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import random
 from collections import Counter
 from itertools import izip
 
@@ -82,10 +83,19 @@ def batch_and_pad(list_of_vectors, maxlen=None):
 # TODO: cleaner iterator with batch and pad
 def data_iterator(source_path, source_vocab, target_path, target_vocab, batch_size=32, maxlen=100):
     batch_source, batch_target, batch_counter = [], [], 0
+    # put in memory, randomize the data (so important!)
 
-    # TODO: randomize
+    source_data = list(_read_data(source_path))
+    target_data = list(_read_data(target_path))
+    line_ids = range(len(source_data))
+    random.shuffle(line_ids)
 
-    for source_text, target_text in izip(_read_data(source_path), _read_data(target_path)):
+    # TODO: memory issue? ideally do it online
+    source_data_rando = [source_data[i] for i in line_ids]
+    target_data_rando = [target_data[i] for i in line_ids]
+
+    # for source_text, target_text in izip(_read_data(source_path), _read_data(target_path)):
+    for source_text, target_text in izip(source_data_rando, target_data_rando):
         source_tokens = tokenize(source_text)
         source_vector = vectorize(source_tokens, source_vocab)
         batch_source.append(source_vector)
@@ -98,6 +108,9 @@ def data_iterator(source_path, source_vocab, target_path, target_vocab, batch_si
         if batch_counter >= batch_size:
             yield batch_and_pad(batch_source, maxlen=maxlen), batch_and_pad(batch_target, maxlen=maxlen)
             batch_source, batch_target, batch_counter = [], [], 0
+
+    # not sure if this helps
+    del source_data, target_data, source_data_copy, target_data_copy, line_ids
 
 
 @shake_utils.cache
