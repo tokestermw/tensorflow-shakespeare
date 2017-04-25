@@ -18,6 +18,9 @@ flags = tf.flags
 
 flags.DEFINE_string("model_dir", "./tmp", (
     "Model directory."))
+flags.DEFINE_boolean("inference", False, (
+    ""))
+
 flags.DEFINE_string("source_train", shake_data.default_modern_train_path, (
     ""))
 flags.DEFINE_string("source_dev", shake_data.default_modern_dev_path, (
@@ -30,8 +33,7 @@ flags.DEFINE_string("pretrained_embeddings_path", shake_data.default_glove_6B_50
     ""))
 
 flags.DEFINE_integer("logging_frequency", 100, (
-    ""
-))
+    ""))
 
 flags.DEFINE_integer("batch_size", 32, (
     ""))
@@ -44,29 +46,27 @@ flags.DEFINE_float("max_grads", 5.0, (
     ""))
 
 flags.DEFINE_integer("num_rnn_layers", 1, (
-    ""
-))
+    ""))
 flags.DEFINE_boolean("is_bidi", False, (
-    ""
-))
+    ""))
 flags.DEFINE_boolean("reverse_sequence", False, (
-    ""
-))
+    ""))
 flags.DEFINE_boolean("add_attention", False, (
-    ""
-))
+    ""))
 # flags.DEFINE_boolean("tied_weights", False, (
-#     ""
-# ))
+#     ""))
 flags.DEFINE_boolean("use_batch_norm", False, (
     ""))
 flags.DEFINE_boolean("use_sentence_projection", False, (
+    ""))
+flags.DEFINE_boolean("use_embedding_projection", False, (
+    ""))
+flags.DEFINE_boolean("trainable", True, (
     ""))
 
 FLAGS = flags.FLAGS
 
 
-# TODO: randomize the data
 def get_input_queues(source_path, source_vocab, target_path, target_vocab,
                      batch_size=32, num_threads=8, maxlen=None):
 
@@ -94,7 +94,7 @@ def get_input_queues(source_path, source_vocab, target_path, target_vocab,
 
 
 def start_threads(thread_fn, args, n_threads=1):
-    assert n_threads == 1, "Having multiple threads causes duplicate data in the queue."
+    # assert n_threads == 1, "Having multiple threads causes duplicate data in the queue."
 
     threads = []
     for n in range(n_threads):
@@ -144,10 +144,16 @@ def _beam_search_text(sess, beam_values, beam_indices, input_ph, output_ph, text
         indices = indices[0][-1]  # only the first element in the batch, last word
         return zip(values.tolist(), indices.tolist())
 
-    generated_word_ids, generated_probs = shake_search.beam_search(_step, 5)
-    text = " ".join([rev_vocab[i] for i in generated_word_ids])
+    # generated_word_ids, generated_probs = shake_search.beam_search(_step, 5)
+    # text = " ".join([rev_vocab[i] for i in generated_word_ids])
+    list_of_word_ids = shake_search.beam_search(_step, 5)
+    generated_text = []
+    for word_ids in list_of_word_ids:
+        generated_text.append(" ".join([rev_vocab[i] for i in word_ids]))
 
-    return text
+    # TODO: not in best order (but ok for now)
+    text = "\n\t".join(generated_text)
+    return "\n\t" + text
 
 
 def _save_config(model_dir, filename="config.json"):
@@ -158,7 +164,21 @@ def _save_config(model_dir, filename="config.json"):
         json.dump(opts, f, indent=4)
 
 
+def _load_config(model_dir, filename="config.json"):
+    path = os.path.join(model_dir, filename)
+    with open(path, 'r') as f:
+        opts = json.load(f)
+    return opts
+
+
 def main(_argv):
+    if FLAGS.inference:
+        opts = _load_config(FLAGS.model_dir)
+        # -- overwrite
+        tf.logging.info("using config in the model_dir")
+        FLAGS.__dict__['__flags'] = opts
+        FLAGS.__dict__['__flags']['inference'] = True
+
     if FLAGS.pretrained_embeddings_path is None:
         source_word2idx, source_idx2word = shake_data.build_vocab(FLAGS.source_train)
     else:
@@ -180,6 +200,8 @@ def main(_argv):
         embedding_matrix=source_embedding_matrix,
         use_batch_norm=FLAGS.use_batch_norm,
         use_sentence_projection=FLAGS.use_sentence_projection,
+        use_embedding_projection=FLAGS.use_embedding_projection,
+        trainable=FLAGS.trainable,
         is_train=True,
         )
     decoder = shake_model.Decoder(
@@ -214,6 +236,8 @@ def main(_argv):
 
     saver = tf.train.Saver()
 
+    summary_op = tf.summary.merge_all()
+
     hooks = [
         # TODO: enqueue operation errors out using this hook
         # tf.train.LoggingTensorHook({
@@ -223,7 +247,10 @@ def main(_argv):
         tf.train.CheckpointSaverHook(
             checkpoint_dir=FLAGS.model_dir,
             save_steps=100,
-            saver=saver)
+            saver=saver),
+        # tf.train.SummarySaverHook(
+            # save_steps=100,
+            # summary_op=summary_op),
     ]
 
     scaffold = tf.train.Scaffold(
@@ -233,30 +260,37 @@ def main(_argv):
         ready_op=None,
         ready_for_local_init_op=None,
         local_init_op=None,
-        summary_op=tf.summary.merge_all(),
+        summary_op=summary_op,
         saver=saver)
 
-    with tf.train.SingularMonitoredSession(hooks=hooks, checkpoint_dir=FLAGS.model_dir, scaffold=scaffold) as sess:
-        _save_config(FLAGS.model_dir)
-
-        start_threads(enqueue_data, (sess, ), n_threads=1)
-
-        while True:
-            _, c, step = sess.run(
-                [train_op, cost, increment])
-
-            # text = "have you killed Tybalt?"
-            # beam_text = _beam_search_text(sess, beam_probs, beam_word_ids, input_ph, output_ph, text, source_word2idx, target_idx2word)
-            # tf.logging.info(beam_text)
-
-            if step % FLAGS.logging_frequency == 0:
-                tf.logging.info("Global step: %i", step)
-                tf.logging.info("Cost: %.4f", c)
-                text = "have you killed Tybalt?"
-                sampled_text = _sample_text(sess, sampled_word_ids, input_ph, text, source_word2idx, target_idx2word)
-                tf.logging.info("greedy argmax: %s", sampled_text)
+    if FLAGS.inference:
+        with tf.train.SingularMonitoredSession(scaffold=scaffold, checkpoint_dir=FLAGS.model_dir) as sess:
+            while True:
+                text = raw_input("Enter text: ")
+                # sampled_text = _sample_text(sess, sampled_word_ids, input_ph, text, source_word2idx, target_idx2word)
+                # print(sampled_text)
                 beam_text = _beam_search_text(sess, beam_probs, beam_word_ids, input_ph, output_ph, text, source_word2idx, target_idx2word)
                 tf.logging.info("beam search: %s", beam_text)
+
+    else:
+        with tf.train.SingularMonitoredSession(hooks=hooks, checkpoint_dir=FLAGS.model_dir, scaffold=scaffold) as sess:
+            _save_config(FLAGS.model_dir)
+
+            start_threads(enqueue_data, (sess, ), n_threads=4)
+
+            while True:
+                _, c, step = sess.run(
+                    [train_op, cost, increment])
+
+                text = "have you killed Tybalt?"
+
+                if step % FLAGS.logging_frequency == 0:
+                    tf.logging.info("Global step: %i", step)
+                    tf.logging.info("Cost: %.4f", c)
+                    sampled_text = _sample_text(sess, sampled_word_ids, input_ph, text, source_word2idx, target_idx2word)
+                    tf.logging.info("greedy argmax: %s", sampled_text)
+                    beam_text = _beam_search_text(sess, beam_probs, beam_word_ids, input_ph, output_ph, text, source_word2idx, target_idx2word)
+                    tf.logging.info("beam search: %s", beam_text)
 
 
 if __name__ == "__main__":
