@@ -76,4 +76,26 @@ class Embedding(snt.Embed):
         return self._embeddings
 
 
+class Dropout(snt.AbstractModule):
+    def __init__(self, 
+                 keep_prob=1.0,
+                 name="dropout"):
+        self._keep_prob = keep_prob
 
+    def _build(self, x):
+        tensor_shape = tf.shape(x)
+        rank = len(tensor_shape)
+        if rank <= 2:
+            x = tf.nn.dropout(x, self._keep_prob)
+        elif rank == 3:
+            # -- word dropout (zero everything on the 1st (time) dimension)
+            x = tf.nn.dropout(x, self._keep_prob, noise_shape=(1, tensor_shape[1], 1))
+        else:
+            raise ValueError("Rank should be 1, 2 or 3.")
+
+        return x
+
+
+# TODO: add dropout wrapper akin to tf.contrib.rnn
+class LSTMDropout(snt.LSTM):
+    pass
