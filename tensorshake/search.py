@@ -53,13 +53,18 @@ def beam_search(probabilities_function, beam_width=10, clip_len=MAXLEN, length_p
 
         # print(current_beam.heap)
         (best_prob, best_complete, best_prefix) = max(current_beam)
-        if best_complete or len(
+
+        # if best_complete or len(
                 # if most probable prefix is a complete sentence or has a length that exceeds the clip length
                 # (ignoring the start token) then return it
-                best_prefix) - 1 == clip_len:
+                # best_prefix) - 1 == clip_len:
             # TODO: return all from heap
-            return (best_prefix[1:],
-                    best_prob)  # return best sentence without the start token and together with its probability
+            # return (best_prefix[1:],
+                    # best_prob)  # return best sentence without the start token and together with its probability
+
+        all_complete = all([i[1] for i in current_beam.heap])
+        if all_complete or len(best_prefix) - 1 == clip_len:
+            return [i[2][1:] for i in sorted(current_beam.heap, key=lambda x: x[0], reverse=True)]
 
         prev_beam = current_beam
 
