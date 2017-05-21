@@ -1,5 +1,6 @@
 appdirs==1.4.3
 cycler==0.10.0
+ipython==5.3.0
 matplotlib==2.0.0
 nltk==3.2.2
 numpy==1.12.1
@@ -14,5 +15,5 @@ pytz==2017.2
 PyYAML==3.12
 # -e git+https://github.com/google/seq2seq.git@761c393893af7f224eed8c39521df85354837279#egg=seq2seq
 six==1.10.0
-tensorflow==1.1.0rc1
+tensorflow==1.1.0
 Unidecode==0.4.20
