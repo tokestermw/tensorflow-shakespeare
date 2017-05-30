@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import json
 import hashlib
 import functools
 import cPickle as pickle
@@ -39,6 +40,20 @@ def cache(f):
 
         return out
     return _cache
+
+
+def save_config(opts, model_dir, filename="config.json"):
+    path = os.path.join(model_dir, filename)
+
+    with open(path, 'w') as f:
+        json.dump(opts, f, indent=4)
+
+
+def load_config(model_dir, filename="config.json"):
+    path = os.path.join(model_dir, filename)
+    with open(path, 'r') as f:
+        opts = json.load(f)
+    return opts
 
 
 if __name__ == "__main__":

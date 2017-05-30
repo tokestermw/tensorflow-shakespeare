@@ -5,337 +5,237 @@ from __future__ import print_function
 import tensorflow as tf
 from tensorflow.contrib import seq2seq
 from tensorflow.contrib.framework.python.ops.variables import get_or_create_global_step
-import sonnet as snt
-
 from tensorflow.python.layers import core as layers_core
 
-import layers as shake_layers
-
-MAXLEN = 100
+import data as shake_data
 
 
-class Encoder(snt.AbstractModule):
-    def __init__(self, vocab_size,
-                 embedding_dim=128,
-                 rnn_hidden_dim=128,
-                 rnn_type="lstm",
-                 num_rnn_layers=1,
-                 is_bidi=False,
-                 is_skip_connections=False,
-                 reverse_sequence=False,
-                 embedding_matrix=None,
-                 use_batch_norm=False,
-                 use_sentence_projection=False,
-                 use_embedding_projection=False,
-                 trainable=True,
-                 is_train=True,
-                 name="encoder"):
-        super(Encoder, self).__init__(name=name)
-
-        self._vocab_size = vocab_size
-        self._embedding_dim = embedding_dim
-        self._rnn_hidden_dim = rnn_hidden_dim
-
-        self._rnn_type = rnn_type
-        self._num_rnn_layers = num_rnn_layers
-        self._is_bidi = is_bidi
-        self._is_skip_connections = is_skip_connections
-        self._reverse_sequence = reverse_sequence
-
-        self._use_batch_norm = use_batch_norm
-
-        self._embedding_matrix = embedding_matrix
-        self._trainable = trainable
-        self._use_sentence_projection = use_sentence_projection
-        self._use_embedding_projection = use_embedding_projection
-
-        self._is_train = is_train
-
-        with self._enter_variable_scope():
-            # TODO: use glove vectors as inits
-            # self._embedding_layer = snt.Embed(
-            #     vocab_size, embedding_dim, existing_vocab=None)
-            self._embedding_layer = shake_layers.Embedding(
-                vocab_size, embedding_dim, existing_vocab=embedding_matrix, trainable=trainable)
-
-            if use_embedding_projection:
-                self._embedding_projection = snt.Linear(embedding_dim, use_bias=False, name="embedding_projection")
-
-            rnn_cell = lambda i: snt.LSTM(rnn_hidden_dim, use_batch_norm_h=use_batch_norm, name="lstm_{}".format(i))
-
-            rnn_layers = [rnn_cell(i) for i in range(num_rnn_layers)]
-            self._cell = snt.DeepRNN(rnn_layers, skip_connections=is_skip_connections)
-
-            if use_sentence_projection:
-                cell_state_size = rnn_layers[0].state_size
-                self._sentence_projection = []
-                for i in range(len(cell_state_size)):
-                    self._sentence_projection.append(snt.Linear(rnn_hidden_dim, name="sentence_projection_{}".format(i)))
-
-    def _build(self, encoder_inputs, sequence_length):
-        batch_size = tf.shape(encoder_inputs)[0]
-        initial_state = self._cell.initial_state(batch_size)
-
-        if self._reverse_sequence:
-            encoder_inputs = tf.reverse_sequence(encoder_inputs, sequence_length, seq_axis=1)
-
-        embedding_outputs = self._embedding_layer(encoder_inputs)
-
-        # TODO: another projection layer
-        if self._use_embedding_projection:
-            batch_embedding_projection = snt.BatchApply(self._embedding_projection)
-            embedding_outputs = batch_embedding_projection(embedding_outputs)
-
-        if self._is_bidi:
-            rnn_outputs, (final_state_fw, final_state_bw) = tf.nn.bidirectional_dynamic_rnn(
-                cell_fw=self._cell, cell_bw=self._cell,
-                inputs=embedding_outputs,
-                time_major=False,
-                initial_state_fw=initial_state,
-                initial_state_bw=initial_state,
-                sequence_length=sequence_length)
-
-            rnn_outputs = tf.concat(rnn_outputs, axis=2)
-
-            final_state_fw = final_state_fw[-1]
-            final_state_bw = final_state_bw[-1]
-            # TODO: add average or concat option?
-            final_state = tuple([tf.add(*i) for i in zip(final_state_fw, final_state_bw)])
-
-        else:
-            rnn_outputs, final_state = tf.nn.dynamic_rnn(
-                cell=self._cell,
-                inputs=embedding_outputs,
-                time_major=False,
-                initial_state=initial_state,
-                sequence_length=sequence_length)
-
-            final_state = final_state[-1]  # last RNN layer output
-
-        # TODO: output projection layer for enhanced sentence embedding?
-        if self._use_sentence_projection:
-            projected_final_state = []
-            for i in range(len(final_state)):
-                projected_final_state.append(tf.nn.relu(self._sentence_projection[i](final_state[i])))
-
-            final_state = tuple(projected_final_state)
-
-        return rnn_outputs, final_state
+def preprocess_encoder(word_ids):
+    word_ids = tf.convert_to_tensor(word_ids, tf.int32)
+    sequence_length = tf.reduce_sum(
+        tf.cast(tf.not_equal(word_ids, 0), tf.int32), axis=1)
+    return word_ids, sequence_length
 
 
-# TODO: use tied embeddings
-# TODO: use scheduled sampling
-class Decoder(snt.AbstractModule):
-    def __init__(self, vocab_size,
-                 embedding_dim=128,
-                 rnn_hidden_dim=128,
-                 attention_hidden_dims=128,
-                 rnn_type="lstm",
-                 add_attention=False,
-                 attention_type="luong",
-                 name="decoder"):
-        super(Decoder, self).__init__(name=name)
+def preprocess_decoder(word_ids):
+    if word_ids is None:
+        return None, None, None
 
-        self._vocab_size = vocab_size
-        self._embedding_dim = embedding_dim
-        self._rnn_hidden_dim = rnn_hidden_dim
+    word_ids = tf.convert_to_tensor(word_ids, tf.int32)
+    sequence_length = tf.reduce_sum(
+        tf.cast(tf.not_equal(word_ids, 0), tf.int32), axis=1)
 
-        self._add_attention = add_attention
-        self._attention_hidden_dims = attention_hidden_dims
-        self._attention_type = attention_type
+    source_word_ids = word_ids[:, :-1]
+    target_word_ids = word_ids[:, 1:]
+    sequence_length -= 1
+    return source_word_ids, target_word_ids, sequence_length
 
-        with self._enter_variable_scope():
-            # self._embedding_layer = snt.Embed(
-            #     vocab_size, embedding_dim, existing_vocab=None)
-            self._embedding_layer = shake_layers.Embedding(
-                vocab_size, embedding_dim, existing_vocab=None)
 
-            if self._add_attention:
-                if attention_type == "luong":
-                    self._create_attention_mechanism = seq2seq.LuongAttention
-                elif attention_type == "bahdanaeu":
-                    self._create_attention_mechanism = seq2seq.BahdanauAttention
-                else:
-                    raise ValueError("Wrong attention_type.")
+def encoder_function(inputs,
+            vocab_size, 
+            embedding_size=128,
+            rnn_hidden_size=128,
+            dropout_rnn=1.0,
+            num_rnn_layers=1,  # TODO: doesn't work with dynamic_decode
+            trainable=True,
+            ):
+    
+    with tf.device("/cpu:0"):
+        word_ids, sequence_length = preprocess_encoder(inputs)
 
-            self._cell = snt.LSTM(rnn_hidden_dim, name="decoder_lstm")
+        embedding_matrix = tf.get_variable(
+            "embedding", shape=[vocab_size, embedding_size],
+            dtype=tf.float32)
 
-            # TODO: tied weights
-            # self._output_layer = snt.Linear(vocab_size, name="output_projection")
-            self._output_layer = layers_core.Dense(
-                vocab_size, use_bias=False, trainable=True, name="output_projection")
+        embedding_inputs = tf.nn.embedding_lookup(
+            embedding_matrix, word_ids, name="embedding_lookup")
 
-    def _build(self, encoder_outputs, encoder_final_state, encoder_sequence_length,
-               decoder_inputs=None, decoder_sequence_length=None):
-        is_inference = decoder_inputs is None and decoder_sequence_length is None
+    rnn_cell = tf.contrib.rnn.LayerNormBasicLSTMCell(
+        rnn_hidden_size, layer_norm=True, dropout_keep_prob=dropout_rnn)
 
-        batch_size = tf.shape(encoder_outputs)[0]
+    rnn_outputs, final_state = tf.nn.dynamic_rnn(
+        cell=rnn_cell,
+        inputs=embedding_inputs,
+        sequence_length=sequence_length,
+        time_major=False, dtype=tf.float32)
+
+    return rnn_outputs, final_state, sequence_length
+
+
+def decoder_function(encoder_outputs,
+            encoder_final_state,
+            encoder_sequence_length,
+            decoder_inputs,
+            vocab_size,
+            embedding_size=128,
+            rnn_hidden_size=128,
+            attention_hidden_size=128,
+            dropout_rnn=1.0,
+            ):
+    is_inference = decoder_inputs is None
+    batch_size = tf.shape(encoder_outputs)[0]
+
+    with tf.device("/cpu:0"):
+        embedding_matrix = tf.get_variable(
+            "embedding", shape=[vocab_size, embedding_size],
+            dtype=tf.float32)
+
+        source_word_ids, target_word_ids, sequence_length = \
+            preprocess_decoder(decoder_inputs)
+
+        if not is_inference:
+            embedding_inputs = tf.nn.embedding_lookup(
+                embedding_matrix, source_word_ids, name="embedding_lookup")
+
+    rnn_cell =  tf.contrib.rnn.LayerNormBasicLSTMCell(
+        rnn_hidden_size, layer_norm=True, dropout_keep_prob=dropout_rnn)
+
+    output_layer = layers_core.Dense(
+        vocab_size, use_bias=False, trainable=True, name="output_projections")
+
+    if is_inference:
+        helper = seq2seq.GreedyEmbeddingHelper(
+            embedding_matrix, 
+            start_tokens=tf.tile([2], [batch_size]), end_token=3)
+    else:
+        # TODO: add scheduled sampling option
+        helper = seq2seq.TrainingHelper(
+            embedding_inputs, sequence_length)
+
+    attention_mechanism = seq2seq.LuongAttention(
+        num_units=attention_hidden_size,
+        memory=encoder_outputs,
+        memory_sequence_length=encoder_sequence_length)
+
+    rnn_cell = seq2seq.AttentionWrapper(
+        rnn_cell,
+        attention_mechanism,
+        attention_layer_size=attention_hidden_size,
+        alignment_history=False,
+        cell_input_fn=None,
+        output_attention=True,  # Luong style attention mechanism
+        initial_cell_state=None)
+
+    initial_state = rnn_cell.zero_state(dtype=tf.float32, batch_size=batch_size)
+    initial_state = initial_state.clone(cell_state=encoder_final_state)
+
+    decoder = seq2seq.BasicDecoder(
+        cell=rnn_cell,
+        helper=helper,
+        initial_state=initial_state,
+        output_layer=output_layer)
+
+    final_outputs, final_state, final_sequence_length = \
+        seq2seq.dynamic_decode(decoder, maximum_iterations=shake_data.MAXLEN)
+    return final_outputs.rnn_output, final_sequence_length, target_word_ids
+
+
+def cost_function(decoder_outputs, decoder_sequence_length, target_word_ids):
+    # so sequence_length matches
+    chop_id = tf.reduce_max(decoder_sequence_length)
+    mask = tf.cast(tf.sequence_mask(decoder_sequence_length), tf.float32)
+    cost = seq2seq.sequence_loss(
+        decoder_outputs, target_word_ids[:, :chop_id], mask)
+    return cost
+
+
+class Seq2Seq:
+    def __init__(self, source_vocab_size, target_vocab_size, config):
+        self._source_vocab_size = source_vocab_size
+        self._target_vocab_size = target_vocab_size
+        self._config = config
+
+        self._global_step = tf.contrib.framework.get_or_create_global_step()
+        self._increment_op = tf.assign(self._global_step, self._global_step + 1)
+
+        self._encoder_function = tf.make_template(
+            "encoder_function", encoder_function, create_scope_now_=True)
+        self._decoder_function = tf.make_template(
+            "decoder_function", decoder_function, create_scope_now_=True)
+
+    def __call__(self, source_inputs, target_inputs):
+        is_inference = decoder_inputs is None
+
+        encoder_outputs, encoder_final_state, encoder_sequence_length = \
+            self._encoder_function(
+                source_inputs, self._source_vocab_size,
+                embedding_size=self.config.embedding_size,
+                rnn_hidden_size=self.config.rnn_hidden_size,
+                dropout_rnn=self.config.dropout_rnn if is_inference else 1.0,
+                num_rnn_layers=self.config.num_rnn_layers,
+                trainable=self.config.trainable)
+
+        decoder_outputs, decoder_sequence_length, target_word_ids = \
+            self._decoder_function(
+                encoder_outputs, encoder_final_state, encoder_sequence_length,
+                target_inputs, self._target_vocab_size,
+                embedding_size=self.config.embedding_size,
+                rnn_hidden_size=self.config.rnn_hidden_size,
+                attention_hidden_size=self.config.attention_hidden_size,
+                dropout_rnn=self.config.dropout_rnn if is_inference else 1.0)
 
         if is_inference:
-            # TODO: if only doing inference, this hasn't gone instantiated.
-            embedding_matrix = self._embedding_layer.embeddings
-            helper = seq2seq.GreedyEmbeddingHelper(
-                embedding_matrix, start_tokens=tf.tile([2], [batch_size]), end_token=3)
-        else:
-            # TODO: add scheduled sampling option
-            embedding_outputs = self._embedding_layer(decoder_inputs)
+            return encoder_outputs, decoder_outputs
 
-            helper = seq2seq.TrainingHelper(embedding_outputs, decoder_sequence_length)
+        cost = cost_function(
+            decoder_outputs, decoder_sequence_length, target_word_ids)
 
-        cell = self._cell
+        return encoder_outputs, decoder_outputs, cost
 
-        if self._add_attention:
-            attention_mechanism = self._create_attention_mechanism(
-                num_units=self._attention_hidden_dims,
-                memory=encoder_outputs,
-                memory_sequence_length=encoder_sequence_length)
+    @property
+    def config(self):
+        return self._config
+    
+    @property
+    def global_step(self):
+        return self._global_step
 
-            cell = seq2seq.DynamicAttentionWrapper(
-                cell,
-                attention_mechanism,
-                attention_size=self._attention_hidden_dims,
-                output_attention=True if self._attention_type == "luong" else False)
+    @property
+    def increment_op(self):
+        return self._increment_op
+    
+    @property
+    def encoder_outputs(self):
+        return self._encoder_outputs
 
-        # -- same as below but only works for training not inference
-        # final_outputs, final_state = tf.nn.dynamic_rnn(
-        #         cell=self._cell,
-        #         inputs=embedding_outputs,
-        #         time_major=False,
-        #         dtype=tf.float32,
-        #         initial_state=cell.initial_state(batch_size),
-        #         initial_state=encoder_final_state,
-        # sequence_length=decoder_sequence_length)
+    @property
+    def decoder_outputs(self):
+        return self._decoder_outputs
+    
+    @property
+    def encoder_final_state(self):
+        return self._encoder_final_state
 
-        if self._add_attention:
-            _initial_state = cell.zero_state(dtype=tf.float32, batch_size=batch_size)
-            initial_state = seq2seq.DynamicAttentionWrapperState(
-                cell_state=encoder_final_state, attention=_initial_state.attention)
-        else:
-            initial_state = encoder_final_state
-
-        # TODO: add beam search decoder
-        decoder = seq2seq.BasicDecoder(
-            cell=cell,
-            helper=helper,
-            initial_state=initial_state,
-            # .rnn_output will include calculations of the output layer if output_layer is not None
-            output_layer=self._output_layer)
-
-        final_outputs, final_state = seq2seq.dynamic_decode(decoder, maximum_iterations=MAXLEN)
-        return final_outputs.rnn_output
-
-
-class Seq2Seq(snt.AbstractModule):
-    def __init__(self, encoder, decoder,
-                 name="seq2seq"):
-        super(Seq2Seq, self).__init__(name=name)
-
-        # if decoder._add_attention:
-            # assert not encoder._reverse_sequence, "Don't reverse sequence when adding attention."
-
-        with self._enter_variable_scope():
-            self._encoder = encoder
-            self._decoder = decoder
-
-            self._global_step = get_or_create_global_step()
-            self._increment_global_step = tf.assign(self._global_step, self._global_step + 1)
-
-    @staticmethod
-    def preprocess_encoder(word_ids):
-        word_ids = tf.convert_to_tensor(word_ids, tf.int32)
-        sequence_length = tf.reduce_sum(tf.cast(tf.not_equal(word_ids, 0), tf.int32), axis=1)
-        return word_ids, sequence_length
-
-    @staticmethod
-    def preprocess_decoder(word_ids):
-        if word_ids is None:
-            return None, None, None
-
-        word_ids = tf.convert_to_tensor(word_ids, tf.int32)
-        sequence_length = tf.reduce_sum(tf.cast(tf.not_equal(word_ids, 0), tf.int32), axis=1)
-
-        source_word_ids = word_ids[:, :-1]
-        target_word_ids = word_ids[:, 1:]
-        sequence_length -= 1
-        return source_word_ids, target_word_ids, sequence_length
-
-    def _build(self, encoder_word_ids, decoder_word_ids=None):
-        is_inference = decoder_word_ids is None
-
-        with tf.device("/cpu:0"):
-            encoder_inputs, encoder_sequence_length = self.preprocess_encoder(
-                encoder_word_ids)
-            decoder_source_inputs, decoder_target_inputs, decoder_sequence_length = self.preprocess_decoder(
-                decoder_word_ids)
-
-        encoder_outputs, encoder_final_state = self._encoder(
-            encoder_inputs, encoder_sequence_length)
-
-        decoder_outputs = self._decoder(
-            encoder_outputs, encoder_final_state, encoder_sequence_length,
-            decoder_source_inputs, decoder_sequence_length)
-
-        return decoder_outputs, decoder_target_inputs
-
-    def cost(self, decoder_outputs, decoder_inputs):
-        logits = tf.reshape(decoder_outputs, (-1, self._decoder._vocab_size))
-        labels = tf.reshape(decoder_inputs, (-1,))
-
-        cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels)
-        cross_entropy = tf.reshape(cross_entropy, tf.shape(decoder_inputs))
-
-        mask = tf.cast(tf.not_equal(decoder_inputs, tf.zeros_like(decoder_inputs)), tf.float32)
-        sequence_length = tf.reduce_sum(mask, axis=1)
-
-        loss = tf.reduce_sum(cross_entropy * mask, axis=1) / sequence_length
-        cost = tf.reduce_mean(loss)
-        tf.summary.scalar("cost", cost)
-        return cost
-
-    # TODO: add other stuff like tokenizer, vectorizer?
-    @staticmethod
-    def generate(decoder_outputs, k=1):
-        if k == 1:
-            sampled_word_ids = tf.argmax(decoder_outputs, axis=-1)
-            return sampled_word_ids
-        elif k > 1:
-            probs = tf.nn.softmax(decoder_outputs, dim=-1)
-            log_probs = tf.log(probs + 0.0001)
-            beam_values, beam_indices = tf.nn.top_k(log_probs, k=k)
-            return beam_values, beam_indices
-
+    @property
+    def cost(self):
+        return self._cost
+    
 
 def _test():
-    source = tf.constant([[0, 1, 2, 3], [0, 1, 2, 3]])
-    target = tf.constant([[1, 1, 2, 3, 3], [1, 1, 2, 3, 3]])
+    source_inputs = tf.constant([[0, 1, 2, 3], [0, 1, 2, 3]])
+    target_inputs = tf.constant([[1, 1, 2, 3, 3], [1, 1, 2, 3, 3]])
 
     rev_vocab = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']
 
-    encoder = Encoder(10, num_rnn_layers=2)
-    decoder = Decoder(10, add_attention=True)
+    encoder_function = tf.make_template("encoder_function", encoder)
+    decoder_function = tf.make_template("decoder_function", decoder)
 
-    seq2seq_model = Seq2Seq(encoder, decoder)
-    train_outputs, train_targets = seq2seq_model(source, target)
-    cost = seq2seq_model.cost(train_outputs, train_targets)
-    inference_outputs, _ = seq2seq_model(source)
-    sampled_word_ids = seq2seq_model.generate(inference_outputs)
+    encoder_outputs, encoder_final_state, encoder_sequence_length = \
+        encoder_function(source_inputs, 10, num_rnn_layers=1)
 
-    input_ph = tf.placeholder(dtype=tf.int32, shape=(None, None))
-    output_ph = tf.placeholder(dtype=tf.int32, shape=(None, None))
-    search_outputs, _ = seq2seq_model(input_ph, output_ph)
+    decoder_outputs, decoder_sequence_length, target_word_ids = \
+        decoder_function(
+            encoder_outputs, encoder_final_state, encoder_sequence_length,
+            target_inputs, 10)
+
+    cost = cost_function(
+        decoder_outputs, decoder_sequence_length, target_word_ids)
+
     with tf.Session() as sess:
-
         sess.run(tf.global_variables_initializer())
-        sess.run(tf.local_variables_initializer())
-
-        c = sess.run(cost)
-        print(c)
-        s = sess.run(sampled_word_ids)
-        print(s)
-        print(s.shape)
-        o = sess.run(search_outputs, feed_dict={input_ph: [[2, 5, 4, 3]], output_ph: [[2, 3]]})
-        print(o)
+        print(sess.run(cost))
 
 
 if __name__ == "__main__":
     _test()
+
