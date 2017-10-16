@@ -19,7 +19,7 @@ flags = tf.flags
 
 flags.DEFINE_string("model_dir", "./tmp", (
     "Model directory."))
-flags.DEFINE_boolean("inference", False, (
+flags.DEFINE_boolean("is_inference", False, (
     ""))
 
 flags.DEFINE_string("source_train", shake_data.default_modern_train_path, (
@@ -115,9 +115,6 @@ def main(_argv):
             checkpoint_dir=FLAGS.model_dir,
             save_steps=100,
             saver=saver),
-        # tf.train.SummarySaverHook(
-            # save_steps=100,
-            # summary_op=summary_op),
     ]
 
     scaffold = tf.train.Scaffold(

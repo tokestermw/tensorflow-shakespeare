@@ -11,32 +11,15 @@ monolingual translation going from modern English to Shakespeare based on resear
 First download the TensorFlow library depending on your platform:
 
 ```
-pip install https://storage.googleapis.com/tensorflow/mac/tensorflow-0.5.0-py2-none-any.whl # for mac
-pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.5.0-cp27-none-linux_x86_64.whl # for ubuntu
+pip install tensorflow==1.2.0
 ```
-
-1. Grabs parallel data.
-2. Gets train, dev split.
-3. Builds vocabulary
-4. Converts parallel data into ids
-
-From the root directory:
-
-```
-python -m tensorshake.get_data
-python -m tensorshake.prepare_corpus
-```
-
-Delete /cache to start anew.
 
 ## Train
 
-Use the example BASH script to train the model. This saves the check points in the `--train_dir` directory.
-If you run it again, the training process continues from the check point. To restart with fresh parameters,
-simply delete/rename the check points.
+To train, you can run the following.
 
 ```
-./run.sh
+python tensorshake/train.py
 ```
 
 ## Results
@@ -66,13 +49,3 @@ Did you just give us the finger, sir? | have you leave the thumb , sir ?
 You don’t know what you’re doing! | you do not what you know you .
 have you killed Tybalt? | hast thou slain tybalt ?
 Why, Romeo, are you crazy? | why , art thou mad , mad ?
-
-## Pre-Trained Models
-
-Here is a link for an example model: https://s3-us-west-2.amazonaws.com/foxtype-nlp/tensorshake/model_cache.zip
-
-## Possible improvements
-
-- word embeddings
-- beam search
-- language model reranking

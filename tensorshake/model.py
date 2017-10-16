@@ -154,14 +154,14 @@ class Seq2Seq:
             "decoder_function", decoder_function, create_scope_now_=True)
 
     def __call__(self, source_inputs, target_inputs):
-        is_inference = decoder_inputs is None
 
         encoder_outputs, encoder_final_state, encoder_sequence_length = \
             self._encoder_function(
                 source_inputs, self._source_vocab_size,
                 embedding_size=self.config.embedding_size,
                 rnn_hidden_size=self.config.rnn_hidden_size,
-                dropout_rnn=self.config.dropout_rnn if is_inference else 1.0,
+                dropout_rnn=self.config.dropout_rnn \
+                    if self.config.is_inference else 1.0,
                 num_rnn_layers=self.config.num_rnn_layers,
                 trainable=self.config.trainable)
 
@@ -172,10 +172,11 @@ class Seq2Seq:
                 embedding_size=self.config.embedding_size,
                 rnn_hidden_size=self.config.rnn_hidden_size,
                 attention_hidden_size=self.config.attention_hidden_size,
-                dropout_rnn=self.config.dropout_rnn if is_inference else 1.0)
+                dropout_rnn=self.config.dropout_rnn \
+                    if self.config.is_inference else 1.0)
 
-        if is_inference:
-            return encoder_outputs, decoder_outputs
+        if self.config.is_inference:
+            return encoder_outputs, decoder_outputs, None
 
         cost = cost_function(
             decoder_outputs, decoder_sequence_length, target_word_ids)
@@ -211,31 +212,5 @@ class Seq2Seq:
         return self._cost
     
 
-def _test():
-    source_inputs = tf.constant([[0, 1, 2, 3], [0, 1, 2, 3]])
-    target_inputs = tf.constant([[1, 1, 2, 3, 3], [1, 1, 2, 3, 3]])
-
-    rev_vocab = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']
-
-    encoder_function = tf.make_template("encoder_function", encoder)
-    decoder_function = tf.make_template("decoder_function", decoder)
-
-    encoder_outputs, encoder_final_state, encoder_sequence_length = \
-        encoder_function(source_inputs, 10, num_rnn_layers=1)
-
-    decoder_outputs, decoder_sequence_length, target_word_ids = \
-        decoder_function(
-            encoder_outputs, encoder_final_state, encoder_sequence_length,
-            target_inputs, 10)
-
-    cost = cost_function(
-        decoder_outputs, decoder_sequence_length, target_word_ids)
-
-    with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
-        print(sess.run(cost))
-
-
 if __name__ == "__main__":
     _test()
-
