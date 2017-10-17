@@ -1,4 +1,4 @@
 virtualenv .
 source bin/activate
-pip install -r requirements.text
+pip install -r requirements.txt
 ./bin/python tensorshake/train.py
